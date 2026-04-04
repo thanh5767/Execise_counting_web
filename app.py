@@ -148,8 +148,27 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
     **MSSV:** 20201234
     """)
     
-    st.write("""
-    **Giá trị thực tiễn:** Ứng dụng giúp người dùng tự tập luyện tại nhà hiệu quả hơn bằng cách tự động đếm số lần tập và đưa ra nhắc nhở về tư thế theo thời gian thực. Bằng việc kết hợp Computer Vision (MediaPipe) và Machine Learning (Random Forest), hệ thống có thể chạy nhẹ nhàng trên các thiết bị cá nhân mà không cần cấu hình cao.
+    st.markdown("""
+    ### 1. Giá trị thực tiễn
+    - **Who (Đối tượng):** Người tự tập thể dục tại nhà (home workout), người mới bắt đầu tập luyện, hoặc huấn luyện viên (PT) muốn theo dõi học viên từ xa.
+    - **What (Vấn đề):** Giải quyết tình trạng tập sai tư thế (dễ gây chấn thương), đếm sai số lần tập (ảnh hưởng tiến độ), và tốn kém chi phí/thời gian khi phải thuê PT kèm cặp trực tiếp.
+    - **Why (Lợi ích):** Giúp người dùng tiết kiệm tiền bạc, giảm rủi ro chấn thương nhờ cảnh báo tư thế realtime, và tăng cường động lực thông qua việc theo dõi chính xác tiến trình tập luyện.
+    
+    ### 2. Nguồn dữ liệu (Data Source)
+    - **Công cụ thu thập:** Video tự quay từ webcam/điện thoại di động và các video mẫu bài tập chuẩn.
+    - **Quy trình gán nhãn:** Gán nhãn bán thủ công. Người dùng tải lên các video ngắn chứa pha cụ thể (Lên/Xuống). Hệ thống tự động dùng thuật toán MediaPipe trích xuất góc khớp trên từng frame và gán nhãn tương ứng.
+    - **Quy mô:** Tối thiểu **30 clip** video ngắn, tương đương với hơn **500 mẫu (frames)** dữ liệu góc khớp (tabular data) cho mỗi bài tập.
+    
+    ### 3. Phương pháp dự kiến (Methodology)
+    - **Tiền xử lý:** 
+      - *Làm sạch:* Loại bỏ các frame MediaPipe không nhận diện được cơ thể.
+      - *Trích xuất:* Tính toán các góc khớp quan trọng (khuỷu tay, hông, đầu gối) từ tọa độ 3D.
+      - *Chuẩn hóa & Vector hóa:* Chuẩn hóa góc về khoảng [0, 1]. Áp dụng kỹ thuật Cửa sổ trượt (Sliding Window) gộp $N$ frames liên tiếp để tạo vector đặc trưng mang thông tin chuỗi thời gian.
+    - **Thuật toán:** **Random Forest**. 
+      - *Lý do chọn:* Rất phù hợp với dữ liệu dạng bảng (tabular data) của các góc khớp, xử lý tốt các mối quan hệ phi tuyến tính, tốc độ suy luận cực nhanh (đáp ứng yêu cầu real-time) trên CPU và ít bị overfit với tập dữ liệu nhỏ.
+    - **Đánh giá:** Đo lường hiệu năng bằng các chỉ số **Accuracy**, **Precision**, **F1-score** và phân tích chi tiết qua **Confusion Matrix**.
+    
+    ---
     """)
     
     tab1, tab2, tab3 = st.tabs(["🔍 Khám phá dữ liệu (EDA)", "📥 Thu thập Dữ liệu", "🧠 Huấn luyện Mô hình"])
@@ -346,7 +365,7 @@ elif page == "🏋️ 2. Triển khai mô hình (Demo)":
                     conf_metric.metric("Độ tin cậy (Confidence)", f"{confidence*100:.1f}%")
                         
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame_window.image(frame_rgb, channels="RGB", width='stretch')
+                    frame_window.image(frame_rgb, channels="RGB", use_column_width=True)
                     
                     if total_frames > 0:
                         progress_bar.progress(min(frame_count / total_frames, 1.0))
