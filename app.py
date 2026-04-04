@@ -172,7 +172,7 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
                 st.plotly_chart(fig1, use_container_width=True)
                 
             with col2:
-                numeric_df = df[['angle_elbow', 'angle_shoulder', 'angle_hip', 'angle_knee']]
+                numeric_df = df[['angle_elbow', 'angle_hip', 'angle_knee']]
                 corr = numeric_df.corr()
                 fig2 = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Greens',
                                 title="Ma trận Tương quan (Correlation Matrix)")
