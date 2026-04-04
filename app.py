@@ -119,7 +119,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Điều hướng",
-    ["📊 Dữ liệu & Huấn luyện", "🏋️ Demo Thực Tế", "📈 Kiểm thử & Đánh giá", "📅 Lịch sử Tập luyện"]
+    ["📊 Dữ liệu & Huấn luyện", "🏋️ Demo Thực Tế", "📈 Kiểm thử & Đánh giá", "📅 Lịch sử Tập luyện", "📄 Báo cáo Học máy"]
 )
 
 st.sidebar.markdown("---")
@@ -198,7 +198,7 @@ if page == "📊 Dữ liệu & Huấn luyện":
             with col_hp3:
                 use_aug = st.checkbox("Sử dụng Data Augmentation (Thêm nhiễu)", value=True)
                 
-            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", use_container_width=True):
+            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", use_container_width="large"):
                 with st.spinner("Đang huấn luyện mô hình..."):
                     success, msg = train_models(n_estimators=n_estimators, max_depth=max_depth, use_augmentation=use_aug)
                     if success:
@@ -472,3 +472,91 @@ elif page == "📅 Lịch sử Tập luyện":
             st.info("Chưa có dữ liệu lịch sử tập luyện.")
     else:
         st.info("Chưa có dữ liệu lịch sử tập luyện. Hãy thực hiện Demo hoặc Kiểm thử để lưu lại kết quả.")
+
+# ==========================================
+# PAGE 5: BÁO CÁO HỌC MÁY
+# ==========================================
+elif page == "📄 Báo cáo Học máy":
+    st.markdown('<p class="main-header">Báo Cáo Nghiên Cứu Học Máy</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy</p>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    ---
+    ### 1. XÁC LẬP BÀI TOÁN
+    
+    **Bối cảnh thực tế & Động lực nghiên cứu**  
+    Sự gia tăng của xu hướng tập luyện tại nhà (home workout) đặt ra một thách thức lớn: thiếu sự giám sát của huấn luyện viên (PT). Người tập thường đối mặt với hai vấn đề cốt lõi: sai tư thế (dẫn đến chấn thương) và đếm sai số lần tập (ảnh hưởng đến tiến độ và động lực). 
+    
+    **Tại sao chọn Push-up và Squat?**  
+    Nghiên cứu tập trung vào hai bài tập này vì chúng là đại diện tiêu biểu cho các nhóm cơ phần trên (upper body) và phần dưới (lower body). Hơn nữa, đây là các bài tập đa khớp (compound movements) có tính chu kỳ rõ rệt, rất phù hợp để làm cơ sở đánh giá các mô hình nhận diện chuỗi thời gian. Việc "đếm số lần" (counting) mang lại giá trị định lượng quan trọng hơn việc chỉ "nhận diện" (classification) hành động, vì nó trực tiếp phục vụ việc theo dõi tiến độ tập luyện.
+    
+    **Đặc thù và Thách thức của Dữ liệu**  
+    Dữ liệu đầu vào là video từ webcam hoặc điện thoại di động. Đây là nguồn dữ liệu "in-the-wild" mang tính thách thức cao do:
+    - **Nhiễu (Noise):** Ánh sáng yếu, background phức tạp.
+    - **Occlusion (Che khuất):** Các bộ phận cơ thể tự che khuất nhau ở một số góc quay.
+    - **Góc nhìn (Viewpoint):** Người dùng hiếm khi đặt camera ở góc chuẩn 90 độ.
+    
+    ---
+    ### 2. TIỀN XỬ LÝ & TRÍCH XUẤT ĐẶC TRƯNG
+    
+    **Tại sao sử dụng MediaPipe Pose thay vì Raw Video?**  
+    Việc đưa trực tiếp chuỗi ảnh (raw frames) vào các mô hình 3D-CNN đòi hỏi tài nguyên tính toán khổng lồ và rất dễ bị overfit vào bối cảnh (background). MediaPipe Pose đóng vai trò như một bộ lọc thông tin, chuyển đổi không gian ảnh RGB nhiều chiều thành một vector 33 điểm neo (keypoints) 3D. Điều này giúp:
+    1. Giảm triệt để chiều dữ liệu.
+    2. Tăng tính bất biến (invariance) với ánh sáng, màu da, và quần áo.
+    
+    **Chiến lược Chuẩn hóa (Normalization)**  
+    Tọa độ pixel thô không có ý nghĩa học máy nếu người tập đứng gần hoặc xa camera. Do đó, dữ liệu được chuẩn hóa bằng cách:
+    - **Centering:** Tịnh tiến gốc tọa độ về điểm giữa hông (mid-hip), loại bỏ sự phụ thuộc vào vị trí camera.
+    - **Scaling:** Chia tọa độ cho chiều cao thân người (khoảng cách vai - hông), giúp mô hình hoạt động ổn định bất kể chiều cao thực tế của người dùng.
+    
+    **Lựa chọn Đặc trưng (Feature Engineering)**  
+    Thay vì dùng trực tiếp tọa độ (x, y, z), nghiên cứu trích xuất **Góc khớp (Joint Angles)** (ví dụ: góc khuỷu tay, góc đầu gối).  
+    *Tại sao?* Vì góc khớp là đại lượng bất biến với phép quay và phép tịnh tiến của camera. Nó phản ánh trực tiếp cơ sinh học (biomechanics) của chuyển động. Một chuỗi các góc khớp theo thời gian (time-series) sẽ mô tả trọn vẹn một chu kỳ Lên-Xuống của bài tập.
+    
+    **Vai trò của Lọc nhiễu (Smoothing)**  
+    MediaPipe thường gặp hiện tượng "jitter" (rung lắc điểm neo) ở các frame mờ. Nếu không có bộ lọc (như Moving Average hay Kalman Filter), các đỉnh nhiễu này sẽ đánh lừa logic đếm, tạo ra các "false reps" (đếm khống).
+    
+    ---
+    ### 3. THỰC THI MÔ HÌNH
+    
+    **Phân tích các hướng tiếp cận:**
+    - **(A) Rule-based (Dựa trên ngưỡng góc):** Dễ triển khai (VD: góc gối < 90° là xuống). *Nhược điểm:* Quá cứng nhắc. Mỗi người có biên độ khớp và tỷ lệ cơ thể khác nhau, một ngưỡng cố định sẽ thất bại trên diện rộng.
+    - **(B) Machine Learning (Random Forest / SVM):** Rất phù hợp với dữ liệu dạng bảng (tabular data) như các góc khớp. Random Forest có khả năng xử lý tốt các mối quan hệ phi tuyến tính và ít bị overfit trên tập dữ liệu nhỏ.
+    - **(C) Deep Learning (LSTM / GRU):** Là lựa chọn tối ưu về mặt lý thuyết vì bản chất bài tập là chuỗi thời gian. *Tuy nhiên*, LSTM đòi hỏi lượng dữ liệu lớn để hội tụ.
+    
+    **Quyết định thiết kế (Design Choice):**  
+    Hệ thống hiện tại sử dụng **Random Forest** kết hợp với phương pháp **Sliding Window** (Cửa sổ trượt). Bằng cách đưa một chuỗi $N$ frames liên tiếp vào Random Forest, mô hình có thể nắm bắt được bối cảnh thời gian (temporal context) mà không cần kiến trúc phức tạp như LSTM, cân bằng hoàn hảo giữa độ chính xác và tốc độ suy luận (inference speed) trên CPU.
+    
+    **Tầm quan trọng của Online Learning / Lưu dữ liệu:**  
+    Hệ thống cho phép người dùng tự thu thập video của chính mình để huấn luyện lại mô hình. Điều này tạo ra một hệ thống *Adaptive* (thích nghi), giúp mô hình tinh chỉnh (fine-tune) theo đúng form tập và góc quay quen thuộc của từng cá nhân, giải quyết triệt để bài toán "out-of-distribution".
+    
+    ---
+    ### 4. PHÂN TÍCH & ĐÁNH GIÁ
+    
+    **Lựa chọn Metrics đánh giá:**
+    - **Accuracy:** Đánh giá khả năng phân loại đúng trạng thái (Up/Down) trên từng frame.
+    - **Precision/Recall:** Cực kỳ quan trọng để tránh đếm sai. Recall thấp nghĩa là bỏ sót rep (undercounting), Precision thấp nghĩa là đếm khống (overcounting).
+    - **MAE (Mean Absolute Error):** Là metric thực tiễn nhất, đo lường sai lệch giữa số rep máy đếm và số rep thực tế do con người gán nhãn.
+    
+    **Nhận xét từ Confusion Matrix & Loss:**  
+    Confusion Matrix giúp phát hiện các điểm mù của mô hình. Thường mô hình sẽ nhầm lẫn ở pha "Transition" (chuyển giao giữa Lên và Xuống). Việc trực quan hóa Prediction vs Ground Truth trên biểu đồ sóng (wave plot) cho thấy rõ: mô hình hoạt động cực tốt khi người dùng tập đúng nhịp, nhưng sẽ gặp khó khăn nếu người dùng dừng lại nghỉ quá lâu ở giữa một rep.
+    
+    **Sự đánh đổi (Trade-offs):**  
+    Hệ thống chấp nhận hy sinh một phần nhỏ Accuracy (bằng cách dùng mô hình nhẹ như Random Forest thay vì các mạng Transformer nặng nề) để đổi lấy **Real-time Speed** (tốc độ xử lý thời gian thực) – yếu tố sống còn của một ứng dụng Fitness.
+    
+    ---
+    ### 5. RỦI RO, ĐẠO ĐỨC & HƯỚNG MỞ RỘNG
+    
+    **Phân tích rủi ro (Risk Analysis):**  
+    Điểm yếu chí mạng của hệ thống là sự phụ thuộc hoàn toàn vào MediaPipe. Nếu MediaPipe thất bại trong việc nhận diện bộ xương (do ánh sáng quá tối hoặc mặc đồ quá rộng), toàn bộ pipeline phía sau sẽ sụp đổ (Cascading Failure). Ngoài ra, với lượng dữ liệu nhỏ, mô hình dễ bị overfitting vào góc quay cụ thể.
+    
+    **So sánh với các giải pháp khác:**  
+    So với việc dùng cảm biến đeo tay (wearable sensors) hay camera hồng ngoại (Kinect), giải pháp Vision-based qua webcam có độ chính xác thấp hơn một chút nhưng lại vượt trội hoàn toàn về tính tiện lợi, chi phí bằng 0 và khả năng tiếp cận đại chúng.
+    
+    **Đạo đức & Quyền riêng tư (Ethics & Privacy):**  
+    Video tập luyện chứa hình ảnh nhạy cảm và không gian riêng tư của người dùng. Giải pháp thiết kế ở đây là **Edge Computing**: toàn bộ quá trình trích xuất MediaPipe và suy luận ML được thực hiện cục bộ (local) trên thiết bị. Không có raw video nào được gửi lên server, đảm bảo tuyệt đối quyền riêng tư.
+    
+    **Định hướng tương lai (Future Work):**
+    1. **Mở rộng bài tập:** Kiến trúc hiện tại hoàn toàn có thể scale lên các bài tập khác như Plank, Pull-up, Jumping Jacks chỉ bằng cách thay đổi tập dữ liệu huấn luyện.
+    2. **AI Coach (Huấn luyện viên AI):** Chuyển từ "Passive Counting" (chỉ đếm) sang "Active Correction" (chủ động sửa sai). Bằng cách phân tích quỹ đạo góc khớp, hệ thống có thể phát ra cảnh báo âm thanh realtime: *"Bạn đang chụm đầu gối quá nhiều"* hoặc *"Hãy xuống sâu hơn"*.
+    """)
