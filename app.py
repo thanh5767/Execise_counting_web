@@ -201,6 +201,23 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
             fig3 = px.box(df, x="phase_label", y="angle_elbow", color="phase_label", title="Phân bố Góc Khuỷu tay theo Nhãn")
             st.plotly_chart(fig3, width='stretch')
             
+            st.write("**3. Phân tích Đa chiều (Multi-dimensional Analysis):**")
+            col3, col4 = st.columns(2)
+            with col3:
+                if 'exercise_type' in df.columns:
+                    ex_counts = df['exercise_type'].value_counts().reset_index()
+                    ex_counts.columns = ['exercise_type', 'count']
+                    fig_pie = px.pie(ex_counts, values='count', names='exercise_type', title="Tỷ lệ Dữ liệu theo Bài tập", hole=0.4, color_discrete_sequence=px.colors.sequential.Teal)
+                    st.plotly_chart(fig_pie, width='stretch')
+            with col4:
+                fig_scatter = px.scatter(df, x='angle_hip', y='angle_knee', color='phase_label', 
+                                         title="Phân tán Góc Hông vs Góc Gối", opacity=0.7)
+                st.plotly_chart(fig_scatter, width='stretch')
+                
+            fig_violin = px.violin(df, y="angle_knee", x="phase_label", color="phase_label", box=True, points="all",
+                                   title="Phân bố Mật độ Góc Gối theo Nhãn (Violin Plot)")
+            st.plotly_chart(fig_violin, width='stretch')
+            
             st.markdown("""
             **📝 Giải thích & Nhận xét:**
             - **Phân phối nhãn:** Biểu đồ cột cho thấy sự cân bằng (hoặc mất cân bằng) giữa các pha Lên/Xuống. Nếu dữ liệu bị lệch (imbalanced), mô hình có xu hướng dự đoán thiên về lớp đa số.
@@ -402,6 +419,16 @@ elif page == "📈 3. Đánh giá & Hiệu năng":
             c2.metric("F1-Score", f"{metrics.get('f1_score', 0)*100:.2f}%")
             c3.metric("Precision", f"{metrics.get('precision', 0)*100:.2f}%")
             
+            # Biểu đồ so sánh các chỉ số
+            metrics_df = pd.DataFrame({
+                'Metric': ['Accuracy', 'F1-Score', 'Precision'],
+                'Score': [metrics.get('accuracy', 0)*100, metrics.get('f1_score', 0)*100, metrics.get('precision', 0)*100]
+            })
+            fig_metrics = px.bar(metrics_df, x='Metric', y='Score', color='Metric', text='Score', 
+                                 title="So sánh Tổng quan các Chỉ số Đánh giá", range_y=[0, 100])
+            fig_metrics.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+            st.plotly_chart(fig_metrics, width='stretch')
+            
             st.write("### 2. Biểu đồ Kỹ thuật")
             col_chart1, col_chart2 = st.columns(2)
             
@@ -552,11 +579,21 @@ elif page == "📅 4. Lịch sử Tập luyện":
             c2.metric("Tổng số Reps", history_df['reps'].sum())
             c3.metric("Tổng thời gian (s)", round(history_df['duration_seconds'].sum(), 1))
             
-            st.write("### 📈 Biểu đồ Số Reps theo Thời gian")
-            fig = px.bar(history_df, x='date', y='reps', color='exercise', 
-                         title="Số Reps qua các buổi tập",
-                         labels={'date': 'Thời gian', 'reps': 'Số Reps', 'exercise': 'Bài tập'})
-            st.plotly_chart(fig, width='stretch')
+            st.write("### 📈 Phân tích Lịch sử Tập luyện")
+            col_hist1, col_hist2 = st.columns(2)
+            
+            with col_hist1:
+                fig_hist_bar = px.bar(history_df, x='date', y='reps', color='exercise', 
+                             title="Số Reps qua các buổi tập",
+                             labels={'date': 'Thời gian', 'reps': 'Số Reps', 'exercise': 'Bài tập'})
+                st.plotly_chart(fig_hist_bar, width='stretch')
+                
+            with col_hist2:
+                ex_reps = history_df.groupby('exercise')['reps'].sum().reset_index()
+                fig_hist_pie = px.pie(ex_reps, values='reps', names='exercise', 
+                                      title="Tỷ trọng Reps theo Bài tập", hole=0.4,
+                                      color_discrete_sequence=px.colors.sequential.RdBu)
+                st.plotly_chart(fig_hist_pie, width='stretch')
             
             st.write("### 📋 Chi tiết các buổi tập")
             st.dataframe(history_df.sort_values(by='date', ascending=False), width='stretch')
