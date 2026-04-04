@@ -160,7 +160,7 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
         
         if df is not None and not df.empty:
             st.write("**1. Dữ liệu thô (Raw Data):**")
-            st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), width='stretch')
             
             st.write("**2. Biểu đồ phân tích:**")
             col1, col2 = st.columns(2)
@@ -169,18 +169,18 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
                 counts.columns = ['phase_label', 'count']
                 fig1 = px.bar(counts, x='phase_label', y='count', color='phase_label',
                              title="Phân phối Nhãn (Class Distribution)")
-                st.plotly_chart(fig1, use_container_width=True)
+                st.plotly_chart(fig1, width='stretch')
                 
             with col2:
                 numeric_df = df[['angle_elbow', 'angle_hip', 'angle_knee']]
                 corr = numeric_df.corr()
                 fig2 = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Greens',
                                 title="Ma trận Tương quan (Correlation Matrix)")
-                st.plotly_chart(fig2, use_container_width=True)
+                st.plotly_chart(fig2, width='stretch')
                 
             st.write("**Phân bố Đặc trưng (Feature Distribution):**")
             fig3 = px.box(df, x="phase_label", y="angle_elbow", color="phase_label", title="Phân bố Góc Khuỷu tay theo Nhãn")
-            st.plotly_chart(fig3, use_container_width=True)
+            st.plotly_chart(fig3, width='stretch')
             
             st.markdown("""
             **📝 Giải thích & Nhận xét:**
@@ -231,7 +231,7 @@ if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
             with col_hp3:
                 use_aug = st.checkbox("Sử dụng Data Augmentation (Thêm nhiễu)", value=True)
                 
-            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", use_container_width=True):
+            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", width='stretch'):
                 with st.spinner("Đang huấn luyện mô hình..."):
                     success, msg = train_models(n_estimators=n_estimators, max_depth=max_depth, use_augmentation=use_aug)
                     if success:
@@ -346,7 +346,7 @@ elif page == "🏋️ 2. Triển khai mô hình (Demo)":
                     conf_metric.metric("Độ tin cậy (Confidence)", f"{confidence*100:.1f}%")
                         
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame_window.image(frame_rgb, channels="RGB", use_column_width=True)
+                    frame_window.image(frame_rgb, channels="RGB", use_container_width=True)
                     
                     if total_frames > 0:
                         progress_bar.progress(min(frame_count / total_frames, 1.0))
@@ -362,7 +362,7 @@ elif page == "🏋️ 2. Triển khai mô hình (Demo)":
                     fig = px.line(x=plot_data['frame'], y=plot_data['angle'], 
                                  labels={'x': 'Frame', 'y': 'Góc (độ)'},
                                  title="Biểu đồ góc theo thời gian")
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
 
 # ==========================================
 # PAGE 3: KIỂM THỬ & ĐÁNH GIÁ
@@ -395,7 +395,7 @@ elif page == "📈 3. Đánh giá & Hiệu năng":
                     fig_cm = px.imshow(cm, x=classes, y=classes, text_auto=True, 
                                       color_continuous_scale='Blues', aspect="auto")
                     fig_cm.update_layout(xaxis_title="Predicted Label", yaxis_title="True Label")
-                    st.plotly_chart(fig_cm, use_container_width=True)
+                    st.plotly_chart(fig_cm, width='stretch')
                     
             with col_chart2:
                 st.write("**Mức độ quan trọng của Đặc trưng (Feature Importance)**")
@@ -411,7 +411,7 @@ elif page == "📈 3. Đánh giá & Hiệu năng":
                                    labels={'x': 'Mức độ quan trọng', 'y': 'Đặc trưng'},
                                    title="Top 10 Đặc trưng quan trọng nhất")
                     fig_fi.update_layout(yaxis={'categoryorder':'total ascending'})
-                    st.plotly_chart(fig_fi, use_container_width=True)
+                    st.plotly_chart(fig_fi, width='stretch')
                 else:
                     st.info("Không có thông tin Feature Importance.")
                     
@@ -537,10 +537,10 @@ elif page == "📅 4. Lịch sử Tập luyện":
             fig = px.bar(history_df, x='date', y='reps', color='exercise', 
                          title="Số Reps qua các buổi tập",
                          labels={'date': 'Thời gian', 'reps': 'Số Reps', 'exercise': 'Bài tập'})
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
             
             st.write("### 📋 Chi tiết các buổi tập")
-            st.dataframe(history_df.sort_values(by='date', ascending=False), use_container_width=True)
+            st.dataframe(history_df.sort_values(by='date', ascending=False), width='stretch')
             
             if st.button("🗑️ Xóa Lịch sử", type="secondary"):
                 os.remove(history_file)
