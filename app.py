@@ -346,7 +346,7 @@ elif page == "🏋️ 2. Triển khai mô hình (Demo)":
                     conf_metric.metric("Độ tin cậy (Confidence)", f"{confidence*100:.1f}%")
                         
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame_window.image(frame_rgb, channels="RGB", use_container_width=True)
+                    frame_window.image(frame_rgb, channels="RGB", width='stretch')
                     
                     if total_frames > 0:
                         progress_bar.progress(min(frame_count / total_frames, 1.0))
