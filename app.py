@@ -606,7 +606,7 @@ with st.sidebar:
 if "Giới thiệu" in page:
 
     page_hero(
-        "Đề tài tốt nghiệp",
+        "Báo cáo kết thúc học phần",
         "Giới thiệu & Khám phá dữ liệu",
         "Tự động đếm số lần tập hít đất & squat từ video bằng MediaPipe Pose kết hợp học máy"
     )
@@ -624,11 +624,11 @@ if "Giới thiệu" in page:
           </tr>
           <tr>
             <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">Sinh viên</td>
-            <td style="color:#4ade80;font-weight:600;padding:5px 0;">Nguyễn Văn A</td>
+            <td style="color:#4ade80;font-weight:600;padding:5px 0;">Trần Lê Xuân Thành</td>
           </tr>
           <tr>
             <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">MSSV</td>
-            <td style="color:#e2e8f0;padding:5px 0;">20201234</td>
+            <td style="color:#e2e8f0;padding:5px 0;">22T1020434</td>
           </tr>
           <tr>
             <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">Năm học</td>
