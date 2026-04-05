@@ -1657,7 +1657,7 @@ elif "Đánh giá" in page:
         <div class="page-hero" style="margin-bottom:24px;">
             <div class="badge">Technical Report</div>
             <h1 style="font-size:1.8rem;">Báo cáo Nghiên cứu Học máy</h1>
-            <p>Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy</p>
+            <p>Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy nhằm hỗ trợ luyện tập thể dục tại nhà hiệu quả</p>
         </div>
         """, unsafe_allow_html=True)
 
