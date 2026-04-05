@@ -17,14 +17,13 @@ from utils.data_utils import load_real_data, save_video_data
 from models.model_utils import load_model_cached, load_metrics, predict_phase
 from models.train_model import train_models
 
-# Suppress Streamlit coroutine warning
 try:
     loop = asyncio.get_running_loop()
 except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-# Page config
+# ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AI Fitness Tracker",
     page_icon="🏋️",
@@ -32,39 +31,354 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# ── Global CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #2E7D32;
-        font-weight: 700;
-        margin-bottom: 0;
-    }
-    .sub-header {
-        font-size: 1.2rem;
-        color: #555;
-        margin-bottom: 2rem;
-    }
-    .stProgress > div > div > div > div {
-        background-color: #4caf50;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+/* ─── Base ─────────────────────────────────────────── */
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* ─── Sidebar ──────────────────────────────────────── */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(160deg, #0a0f1e 0%, #0d1f12 100%);
+    border-right: 1px solid rgba(74,222,128,0.15);
+}
+section[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
+}
+section[data-testid="stSidebar"] .stRadio label {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: block;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+section[data-testid="stSidebar"] .stRadio label:hover {
+    background: rgba(74,222,128,0.12);
+    border-color: rgba(74,222,128,0.4);
+}
+section[data-testid="stSidebar"] .stRadio [data-checked="true"] label,
+section[data-testid="stSidebar"] .stRadio input:checked + label {
+    background: rgba(74,222,128,0.18);
+    border-color: #4ade80;
+}
+
+/* ─── Main background ──────────────────────────────── */
+.main .block-container {
+    background: #f8fafc;
+    padding-top: 2rem;
+}
+
+/* ─── Page header band ─────────────────────────────── */
+.page-hero {
+    background: linear-gradient(135deg, #0a0f1e 0%, #0d2116 50%, #0a1a0a 100%);
+    border-radius: 20px;
+    padding: 40px 48px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+}
+.page-hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(74,222,128,0.2) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.page-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 30%;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.page-hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    position: relative;
+    z-index: 1;
+    letter-spacing: -0.5px;
+}
+.page-hero p {
+    color: rgba(255,255,255,0.6);
+    font-size: 1.05rem;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    font-weight: 300;
+}
+.page-hero .badge {
+    display: inline-block;
+    background: rgba(74,222,128,0.2);
+    border: 1px solid rgba(74,222,128,0.5);
+    color: #4ade80;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ─── Info card ────────────────────────────────────── */
+.info-card {
+    background: linear-gradient(135deg, #0f2027 0%, #1a3a20 100%);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    color: #e2e8f0;
+}
+.info-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4ade80;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+.info-card p, .info-card li { color: rgba(255,255,255,0.75); font-size: 0.9rem; line-height: 1.7; }
+
+/* ─── Stat cards ───────────────────────────────────── */
+.stat-row { display: flex; gap: 16px; margin-bottom: 24px; }
+.stat-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 22px 24px;
+    flex: 1;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s;
+}
+.stat-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.1); }
+.stat-card .label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.stat-card .value {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+.stat-card .unit { font-size: 0.9rem; color: #64748b; margin-top: 4px; }
+.stat-card .accent { color: #16a34a; }
+
+/* ─── Section headings ─────────────────────────────── */
+.section-heading {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    border-left: 4px solid #4ade80;
+    padding-left: 14px;
+    margin: 32px 0 16px 0;
+}
+
+/* ─── Panel / white card ───────────────────────────── */
+.panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* ─── Metric pill ──────────────────────────────────── */
+.metric-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 30px;
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    color: #15803d;
+    font-weight: 600;
+    margin: 4px;
+}
+
+/* ─── Tab override ─────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+    border: none;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 9px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #64748b;
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+}
+.stTabs [aria-selected="true"] {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ─── Buttons ──────────────────────────────────────── */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    padding: 10px 28px;
+    transition: all 0.2s;
+}
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #15803d, #166534);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(22,163,74,0.4);
+}
+
+/* ─── Progress bar ─────────────────────────────────── */
+.stProgress > div > div > div > div { background: #4ade80; }
+
+/* ─── Expander ─────────────────────────────────────── */
+.streamlit-expanderHeader {
+    background: #f8fafc;
+    border-radius: 10px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+/* ─── Alert boxes ──────────────────────────────────── */
+.stAlert { border-radius: 12px; }
+
+/* ─── Sidebar logo area ────────────────────────────── */
+.sidebar-logo {
+    text-align: center;
+    padding: 20px 0 16px 0;
+}
+.sidebar-logo .logo-icon {
+    font-size: 3rem;
+    display: block;
+    line-height: 1;
+}
+.sidebar-logo .logo-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #4ade80;
+    letter-spacing: -0.3px;
+    margin-top: 8px;
+}
+.sidebar-logo .logo-sub {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+.sidebar-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 12px 0 18px 0;
+}
+
+/* ─── Model status badge ───────────────────────────── */
+.model-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 16px;
+}
+.model-ok { background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.3); color: #4ade80; }
+.model-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #f87171; }
+
+/* ─── Analysis note box ────────────────────────────── */
+.analysis-note {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 0 12px 12px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 0.9rem;
+    color: #78350f;
+    line-height: 1.65;
+}
+
+/* ─── Error case table ─────────────────────────────── */
+.error-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.error-table th {
+    background: #0f172a; color: #4ade80;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.78rem; letter-spacing: 0.8px;
+    padding: 12px 16px; text-align: left;
+}
+.error-table td { padding: 11px 16px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+.error-table tr:last-child td { border-bottom: none; }
+.error-table tr:hover td { background: #f8fafc; }
+.tag {
+    display: inline-block;
+    font-size: 0.72rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px;
+    background: #fee2e2; color: #991b1b; margin-bottom: 2px;
+}
+.tag-warn { background: #fef3c7; color: #92400e; }
+.tag-ok   { background: #dcfce7; color: #166534; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CACHED FUNCTIONS ---
+# ── Helper: hero banner ────────────────────────────────────────────────────────
+def page_hero(badge, title, subtitle):
+    st.markdown(f"""
+    <div class="page-hero">
+        <div class="badge">{badge}</div>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def section_heading(text):
+    st.markdown(f'<div class="section-heading">{text}</div>', unsafe_allow_html=True)
+
+# ── Cached loaders ─────────────────────────────────────────────────────────────
+@st.cache_data(show_spinner=False)
 def get_dataset():
     return load_real_data()
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def get_model():
     return load_model_cached()
 
 def save_workout_history(exercise_type, reps, duration, accuracy=None):
-    """Save workout session to history."""
     history_file = 'data/workout_history.csv'
     os.makedirs('data', exist_ok=True)
-    
     new_record = pd.DataFrame([{
         'date': pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S"),
         'exercise': exercise_type,
@@ -72,293 +386,503 @@ def save_workout_history(exercise_type, reps, duration, accuracy=None):
         'duration_seconds': round(duration, 1),
         'accuracy': accuracy if accuracy is not None else 'N/A'
     }])
-    
     if os.path.exists(history_file):
         history_df = pd.read_csv(history_file)
         history_df = pd.concat([history_df, new_record], ignore_index=True)
     else:
         history_df = new_record
-        
     history_df.to_csv(history_file, index=False)
 
 def extract_frames_from_video(video_path, exercise_type, phase_label):
     cap = cv2.VideoCapture(video_path)
     processor = PoseProcessor()
     angles_list = []
-    
-    progress_bar = st.progress(0)
+    progress_bar = st.progress(0, text="Đang trích xuất keypoints…")
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_count = 0
-    
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-            
         frame_count += 1
         landmarks = processor.extract_keypoints(frame)
         angles = processor.get_exercise_angles(landmarks)
-        
         if angles:
             angles_list.append(angles)
-            
         if total_frames > 0:
-            progress_bar.progress(min(frame_count / total_frames, 1.0))
-            
+            progress_bar.progress(min(frame_count / total_frames, 1.0),
+                                  text=f"Frame {frame_count}/{total_frames}")
     cap.release()
-    
     if angles_list:
         saved_count = save_video_data(angles_list, exercise_type, phase_label)
         return True, saved_count
     return False, 0
 
-# --- SIDEBAR NAVIGATION ---
-st.sidebar.image("https://img.icons8.com/color/96/000000/dumbbell.png", width=80)
-st.sidebar.title("AI Fitness Tracker")
-st.sidebar.markdown("---")
-
-page = st.sidebar.radio(
-    "Điều hướng",
-    [
-        "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)", 
-        "🏋️ 2. Triển khai mô hình (Demo)", 
-        "📈 3. Đánh giá & Hiệu năng", 
-        "📅 4. Lịch sử Tập luyện", 
-        "📄 5. Báo cáo chi tiết"
-    ]
-)
-
-st.sidebar.markdown("---")
-
-model, scaler, le = get_model()
-model_trained = model is not None
-
-if not model_trained and page != "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
-    st.warning("⚠️ Mô hình chưa được huấn luyện! Vui lòng thu thập dữ liệu và huấn luyện trước.")
-
-# ==========================================
-# PAGE 1: GIỚI THIỆU & EDA
-# ==========================================
-if page == "📊 1. Giới thiệu & Khám phá dữ liệu (EDA)":
-    st.markdown('<p class="main-header">Giới thiệu & Khám phá dữ liệu (EDA)</p>', unsafe_allow_html=True)
-    
-    st.info("""
-    **Đề tài:** Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy nhằm hỗ trợ luyện tập thể dục tại nhà hiệu quả  
-    **Sinh viên:** Nguyễn Văn A  
-    **MSSV:** 20201234
-    """)
-    
+# ── Sidebar ────────────────────────────────────────────────────────────────────
+with st.sidebar:
     st.markdown("""
-    ### 1. Giá trị thực tiễn
-    - **Who (Đối tượng):** Người tự tập thể dục tại nhà (home workout), người mới bắt đầu tập luyện, hoặc huấn luyện viên (PT) muốn theo dõi học viên từ xa.
-    - **What (Vấn đề):** Giải quyết tình trạng tập sai tư thế (dễ gây chấn thương), đếm sai số lần tập (ảnh hưởng tiến độ), và tốn kém chi phí/thời gian khi phải thuê PT kèm cặp trực tiếp.
-    - **Why (Lợi ích):** Giúp người dùng tiết kiệm tiền bạc, giảm rủi ro chấn thương nhờ cảnh báo tư thế realtime, và tăng cường động lực thông qua việc theo dõi chính xác tiến trình tập luyện.
-    
-    ### 2. Nguồn dữ liệu (Data Source)
-    - **Công cụ thu thập:** Video tự quay từ webcam/điện thoại di động và các video mẫu bài tập chuẩn.
-    - **Quy trình gán nhãn:** Gán nhãn bán thủ công. Người dùng tải lên các video ngắn chứa pha cụ thể (Lên/Xuống). Hệ thống tự động dùng thuật toán MediaPipe trích xuất góc khớp trên từng frame và gán nhãn tương ứng.
-    - **Quy mô:** Tối thiểu **30 clip** video ngắn, tương đương với hơn **500 mẫu (frames)** dữ liệu góc khớp (tabular data) cho mỗi bài tập.
-    
-    ### 3. Phương pháp dự kiến (Methodology)
-    - **Tiền xử lý:** 
-      - *Làm sạch:* Loại bỏ các frame MediaPipe không nhận diện được cơ thể.
-      - *Trích xuất:* Tính toán các góc khớp quan trọng (khuỷu tay, hông, đầu gối) từ tọa độ 3D.
-      - *Chuẩn hóa & Vector hóa:* Chuẩn hóa góc về khoảng [0, 1]. Áp dụng kỹ thuật Cửa sổ trượt (Sliding Window) gộp $N$ frames liên tiếp để tạo vector đặc trưng mang thông tin chuỗi thời gian.
-    - **Thuật toán:** **Random Forest**. 
-      - *Lý do chọn:* Rất phù hợp với dữ liệu dạng bảng (tabular data) của các góc khớp, xử lý tốt các mối quan hệ phi tuyến tính, tốc độ suy luận cực nhanh (đáp ứng yêu cầu real-time) trên CPU và ít bị overfit với tập dữ liệu nhỏ.
-    - **Đánh giá:** Đo lường hiệu năng bằng các chỉ số **Accuracy**, **Precision**, **F1-score** và phân tích chi tiết qua **Confusion Matrix**.
-    
-    ---
-    """)
-    
-    tab1, tab2, tab3 = st.tabs(["🔍 Khám phá dữ liệu (EDA)", "📥 Thu thập Dữ liệu", "🧠 Huấn luyện Mô hình"])
-    
-    with tab1:
-        st.write("### 🔍 Phân tích Dữ liệu Thực tế (EDA)")
+    <div class="sidebar-logo">
+        <span class="logo-icon">🏋️</span>
+        <div class="logo-title">AI Fitness Tracker</div>
+        <div class="logo-sub">MediaPipe · ML · Streamlit</div>
+    </div>
+    <hr class="sidebar-divider"/>
+    """, unsafe_allow_html=True)
+
+    page = st.radio(
+        "Điều hướng",
+        [
+            "📊  Giới thiệu & Khám phá dữ liệu",
+            "🏋️  Triển khai mô hình",
+            "📈  Đánh giá & Hiệu năng",
+        ],
+        label_visibility="collapsed"
+    )
+
+    st.markdown('<hr class="sidebar-divider"/>', unsafe_allow_html=True)
+
+    model, scaler, le = get_model()
+    model_trained = model is not None
+
+    if model_trained:
+        st.markdown('<div class="model-status model-ok">✓ Mô hình đã sẵn sàng</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="model-status model-err">✗ Chưa có mô hình</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <br/>
+    <div style="font-size:0.72rem;color:rgba(255,255,255,0.2);text-align:center;letter-spacing:0.5px;">
+    v2.0 · 2024 · AI Fitness Lab
+    </div>
+    """, unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 1 — GIỚI THIỆU & EDA
+# ══════════════════════════════════════════════════════════════════════════════
+if "Giới thiệu" in page:
+
+    page_hero(
+        "Đề tài tốt nghiệp",
+        "Giới thiệu & Khám phá dữ liệu",
+        "Tự động đếm số lần tập hít đất & squat từ video bằng MediaPipe Pose kết hợp học máy"
+    )
+
+    # ── Student info ──────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="info-card">
+        <h3>📋 Thông tin đề tài</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="width:30%;color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;vertical-align:top;">Tên đề tài</td>
+            <td style="color:#e2e8f0;font-size:0.92rem;font-weight:500;padding:5px 0;">
+              Đếm số lần tập hít đất/squat từ video người tập bằng MediaPipe Pose kết hợp học máy
+            </td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">Sinh viên</td>
+            <td style="color:#4ade80;font-weight:600;padding:5px 0;"> Trần Lê Xuân Thành</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">MSSV</td>
+            <td style="color:#e2e8f0;padding:5px 0;">22T1020434</td>
+          </tr>
+          <tr>
+            <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">Năm học</td>
+            <td style="color:#e2e8f0;padding:5px 0;">2024 – 2025</td>
+          </tr>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Value props ───────────────────────────────────────────────────────
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("""
+        <div class="panel" style="border-top:3px solid #4ade80;">
+            <div style="font-size:2rem;margin-bottom:10px;">🎯</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#0f172a;margin-bottom:8px;">Đúng số lần</div>
+            <div style="font-size:0.88rem;color:#64748b;line-height:1.65;">
+                Đếm rep tự động, loại bỏ sai số do mất tập trung hoặc mệt mỏi khi tự đếm.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown("""
+        <div class="panel" style="border-top:3px solid #38bdf8;">
+            <div style="font-size:2rem;margin-bottom:10px;">🛡️</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#0f172a;margin-bottom:8px;">Phòng chấn thương</div>
+            <div style="font-size:0.88rem;color:#64748b;line-height:1.65;">
+                Phân tích góc khớp realtime, phát hiện tư thế sai và cảnh báo ngay lập tức.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown("""
+        <div class="panel" style="border-top:3px solid #a78bfa;">
+            <div style="font-size:2rem;margin-bottom:10px;">💰</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;color:#0f172a;margin-bottom:8px;">Tiết kiệm chi phí</div>
+            <div style="font-size:0.88rem;color:#64748b;line-height:1.65;">
+                Thay thế một phần vai trò huấn luyện viên cá nhân — chỉ cần webcam là đủ.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── Methodology overview ──────────────────────────────────────────────
+    section_heading("🔬 Phương pháp & Pipeline")
+    st.markdown("""
+    <div class="panel">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#0f172a;">
+          <th style="color:#4ade80;font-family:'Syne',sans-serif;font-size:0.78rem;letter-spacing:0.8px;padding:12px 16px;text-align:left;border-radius:8px 0 0 0;">BƯỚC</th>
+          <th style="color:#4ade80;font-family:'Syne',sans-serif;font-size:0.78rem;letter-spacing:0.8px;padding:12px 16px;">CÔNG NGHỆ</th>
+          <th style="color:#4ade80;font-family:'Syne',sans-serif;font-size:0.78rem;letter-spacing:0.8px;padding:12px 16px;border-radius:0 8px 0 0;">MÔ TẢ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a;">1. Thu thập</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#6366f1;">Webcam / Điện thoại</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:0.88rem;">Video tự quay trong điều kiện ánh sáng thông thường tại nhà</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a;">2. Trích xuất</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#6366f1;">MediaPipe BlazePose</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:0.88rem;">33 điểm mốc cơ thể → tính góc khớp (khuỷu, hông, gối)</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a;">3. Tiền xử lý</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#6366f1;">Sliding Window · StandardScaler</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:0.88rem;">Chuẩn hóa [0,1], cửa sổ trượt 30 frames, delta features</td></tr>
+        <tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#0f172a;">4. Mô hình</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#6366f1;">Random Forest</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:0.88rem;">Phân loại pha UP / DOWN — nhẹ, nhanh, phù hợp realtime trên CPU</td></tr>
+        <tr><td style="padding:12px 16px;font-weight:600;color:#0f172a;">5. Đếm Rep</td>
+            <td style="padding:12px 16px;color:#6366f1;">State Machine</td>
+            <td style="padding:12px 16px;color:#475569;font-size:0.88rem;">Chuyển trạng thái DOWN → UP = +1 rep, có lọc nhiễu</td></tr>
+      </tbody>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Tabs: EDA | Thu thập | Huấn luyện ────────────────────────────────
+    section_heading("📂 Dữ liệu & Huấn luyện")
+    tab_eda, tab_collect, tab_train = st.tabs([
+        "🔍  Khám phá dữ liệu (EDA)",
+        "📥  Thu thập dữ liệu",
+        "🧠  Huấn luyện mô hình",
+    ])
+
+    # ── TAB EDA ───────────────────────────────────────────────────────────
+    with tab_eda:
         df = get_dataset()
-        
-        if df is not None and not df.empty:
-            st.write("**1. Dữ liệu thô (Raw Data):**")
-            st.dataframe(df.head(10), width='stretch')
-            
-            st.write("**2. Biểu đồ phân tích:**")
+        if df is None or df.empty:
+            st.info("⚠️ Tập dữ liệu đang trống. Hãy chuyển sang tab **Thu thập dữ liệu** để tải video lên.")
+        else:
+            # Dataset stats
+            n_frames = len(df)
+            n_classes = df['phase_label'].nunique()
+            n_exercises = df['exercise_type'].nunique() if 'exercise_type' in df.columns else 1
+
+            st.markdown(f"""
+            <div class="stat-row">
+              <div class="stat-card">
+                <div class="label">Tổng số frames</div>
+                <div class="value accent">{n_frames:,}</div>
+                <div class="unit">mẫu dữ liệu</div>
+              </div>
+              <div class="stat-card">
+                <div class="label">Số nhãn (classes)</div>
+                <div class="value">{n_classes}</div>
+                <div class="unit">pha chuyển động</div>
+              </div>
+              <div class="stat-card">
+                <div class="label">Số bài tập</div>
+                <div class="value">{n_exercises}</div>
+                <div class="unit">loại bài tập</div>
+              </div>
+              <div class="stat-card">
+                <div class="label">Đặc trưng</div>
+                <div class="value">3</div>
+                <div class="unit">góc khớp</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Raw data preview
+            with st.expander("📄 Xem dữ liệu thô (10 dòng đầu)", expanded=False):
+                st.dataframe(df.head(10), width='stretch')
+
+            # Charts row 1
             col1, col2 = st.columns(2)
             with col1:
                 counts = df['phase_label'].value_counts().reset_index()
                 counts.columns = ['phase_label', 'count']
-                fig1 = px.bar(counts, x='phase_label', y='count', color='phase_label',
-                             title="Phân phối Nhãn (Class Distribution)")
+                fig1 = px.bar(
+                    counts, x='phase_label', y='count', color='phase_label',
+                    title="Phân phối nhãn (Class Distribution)",
+                    color_discrete_sequence=['#4ade80', '#16a34a', '#38bdf8', '#0284c7'],
+                    template="plotly_white"
+                )
+                fig1.update_layout(
+                    showlegend=False, title_font_family="Syne",
+                    plot_bgcolor='white', paper_bgcolor='white',
+                    xaxis_tickangle=-20,
+                    margin=dict(t=50, b=20)
+                )
                 st.plotly_chart(fig1, width='stretch')
-                
+
             with col2:
                 numeric_df = df[['angle_elbow', 'angle_hip', 'angle_knee']]
                 corr = numeric_df.corr()
-                fig2 = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='Greens',
-                                title="Ma trận Tương quan (Correlation Matrix)")
+                fig2 = px.imshow(
+                    corr, text_auto='.2f', aspect="auto",
+                    color_continuous_scale='RdYlGn',
+                    title="Ma trận tương quan góc khớp",
+                    template="plotly_white"
+                )
+                fig2.update_layout(
+                    title_font_family="Syne",
+                    margin=dict(t=50, b=20)
+                )
                 st.plotly_chart(fig2, width='stretch')
-                
-            st.write("**Phân bố Đặc trưng (Feature Distribution):**")
-            fig3 = px.box(df, x="phase_label", y="angle_elbow", color="phase_label", title="Phân bố Góc Khuỷu tay theo Nhãn")
-            st.plotly_chart(fig3, width='stretch')
-            
-            st.write("**3. Phân tích Đa chiều (Multi-dimensional Analysis):**")
+
+            # Charts row 2
             col3, col4 = st.columns(2)
             with col3:
-                if 'exercise_type' in df.columns:
-                    ex_counts = df['exercise_type'].value_counts().reset_index()
-                    ex_counts.columns = ['exercise_type', 'count']
-                    fig_pie = px.pie(ex_counts, values='count', names='exercise_type', title="Tỷ lệ Dữ liệu theo Bài tập", hole=0.4, color_discrete_sequence=px.colors.sequential.Teal)
-                    st.plotly_chart(fig_pie, width='stretch')
-            with col4:
-                fig_scatter = px.scatter(df, x='angle_hip', y='angle_knee', color='phase_label', 
-                                         title="Phân tán Góc Hông vs Góc Gối", opacity=0.7)
-                st.plotly_chart(fig_scatter, width='stretch')
-                
-            fig_violin = px.violin(df, y="angle_knee", x="phase_label", color="phase_label", box=True, points="all",
-                                   title="Phân bố Mật độ Góc Gối theo Nhãn (Violin Plot)")
-            st.plotly_chart(fig_violin, width='stretch')
-            
-            st.markdown("""
-            **📝 Giải thích & Nhận xét:**
-            - **Phân phối nhãn:** Biểu đồ cột cho thấy sự cân bằng (hoặc mất cân bằng) giữa các pha Lên/Xuống. Nếu dữ liệu bị lệch (imbalanced), mô hình có xu hướng dự đoán thiên về lớp đa số.
-            - **Ma trận tương quan:** Thể hiện mối quan hệ tuyến tính giữa các góc khớp. Ví dụ: trong bài Squat, góc hông và góc gối thường có độ tương quan thuận rất cao.
-            - **Phân bố đặc trưng:** Biểu đồ Boxplot cho thấy sự khác biệt rõ rệt của góc khuỷu tay giữa pha `push-up_up` và `push-up_down`, chứng tỏ đây là đặc trưng quan trọng nhất để phân loại.
-            """)
-        else:
-            st.info("Tập dữ liệu đang trống. Vui lòng chuyển sang tab 'Thu thập Dữ liệu' để tải lên video.")
+                fig3 = px.box(
+                    df, x="phase_label", y="angle_elbow", color="phase_label",
+                    title="Phân bố Góc khuỷu tay theo Nhãn",
+                    color_discrete_sequence=['#4ade80', '#16a34a', '#38bdf8', '#0284c7'],
+                    template="plotly_white"
+                )
+                fig3.update_layout(showlegend=False, title_font_family="Syne", margin=dict(t=50, b=20))
+                st.plotly_chart(fig3, width='stretch')
 
-    with tab2:
-        st.write("Tải lên các đoạn video ngắn (chỉ chứa pha LÊN hoặc XUỐNG) để xây dựng tập dữ liệu huấn luyện.")
-        
-        col1, col2 = st.columns([1, 2])
+            with col4:
+                fig4 = px.scatter(
+                    df, x='angle_hip', y='angle_knee', color='phase_label',
+                    title="Phân tán: Góc Hông vs Góc Gối",
+                    opacity=0.65,
+                    color_discrete_sequence=['#4ade80', '#16a34a', '#38bdf8', '#0284c7'],
+                    template="plotly_white"
+                )
+                fig4.update_layout(title_font_family="Syne", margin=dict(t=50, b=20))
+                st.plotly_chart(fig4, width='stretch')
+
+            # Violin
+            fig5 = px.violin(
+                df, y="angle_knee", x="phase_label", color="phase_label",
+                box=True, points="outliers",
+                title="Phân bố mật độ Góc Gối theo Nhãn (Violin Plot)",
+                color_discrete_sequence=['#4ade80', '#16a34a', '#38bdf8', '#0284c7'],
+                template="plotly_white"
+            )
+            fig5.update_layout(showlegend=False, title_font_family="Syne", margin=dict(t=50, b=20))
+            st.plotly_chart(fig5, width='stretch')
+
+            # Analysis note
+            st.markdown("""
+            <div class="analysis-note">
+              <strong>📝 Nhận xét phân tích:</strong><br/>
+              • <strong>Phân phối nhãn:</strong> Biểu đồ cột cho thấy sự cân bằng giữa các pha UP/DOWN. Nếu dữ liệu bị lệch, mô hình sẽ thiên về lớp đa số — cần dùng class weighting hoặc thu thập bổ sung.<br/>
+              • <strong>Tương quan:</strong> Trong Squat, góc hông & góc gối có tương quan thuận rất cao (~0.9). Trong Push-up, góc khuỷu là đặc trưng phân loại chủ đạo, tương quan với hông thấp hơn nhiều.<br/>
+              • <strong>Boxplot:</strong> Khoảng cách IQR rõ rệt giữa <em>push-up_up</em> và <em>push-up_down</em> cho thấy góc khuỷu là feature quan trọng nhất để phân loại pha Push-up.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ── TAB THU THẬP ──────────────────────────────────────────────────────
+    with tab_collect:
+        st.markdown("""
+        <div class="panel">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:#0f172a;margin-bottom:6px;">
+            📥 Thu thập dữ liệu huấn luyện từ video
+          </div>
+          <div style="font-size:0.88rem;color:#64748b;line-height:1.65;">
+            Tải lên các đoạn video ngắn — mỗi video <strong>chỉ chứa một pha</strong> (LÊN hoặc XUỐNG).
+            Hệ thống sẽ tự động dùng MediaPipe để trích xuất góc khớp và lưu vào dataset.
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns([1, 1], gap="large")
         with col1:
-            ex_type = st.selectbox("Loại bài tập", ["Push-up", "Squat"])
-            phase = st.selectbox("Pha chuyển động (Label)", [f"{ex_type.lower()}_up", f"{ex_type.lower()}_down"])
-            uploaded_train_vid = st.file_uploader("Chọn video huấn luyện", type=['mp4', 'avi', 'mov'], key="train_vid")
-            
+            ex_type = st.selectbox("Loại bài tập", ["Push-up", "Squat"], key="collect_ex")
+            phase = st.selectbox(
+                "Pha chuyển động (nhãn)",
+                [f"{ex_type.lower()}_up", f"{ex_type.lower()}_down"],
+                key="collect_phase"
+            )
+            uploaded_train_vid = st.file_uploader(
+                "Chọn video huấn luyện",
+                type=['mp4', 'avi', 'mov'], key="train_vid"
+            )
         with col2:
+            st.markdown("""
+            <div class="panel" style="background:#f8fafc;">
+              <div style="font-weight:600;color:#0f172a;margin-bottom:10px;">💡 Hướng dẫn quay video</div>
+              <ul style="font-size:0.87rem;color:#475569;line-height:1.8;margin:0;padding-left:18px;">
+                <li>Đặt camera <strong>ngang hông</strong>, cách 1.5–2m</li>
+                <li>Đảm bảo <strong>toàn thân</strong> trong khung hình</li>
+                <li>Ánh sáng đầy đủ, tránh ngược sáng</li>
+                <li>Mỗi pha nên có <strong>5–10 lần lặp</strong></li>
+                <li>Mặc quần áo bó, tránh quần áo rộng che khớp</li>
+              </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
             if uploaded_train_vid is not None:
-                if st.button("Trích xuất & Lưu vào Dataset", type="primary"):
-                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') 
+                if st.button("⚡ Trích xuất & Lưu vào Dataset", type="primary", width='stretch'):
+                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                     tfile.write(uploaded_train_vid.read())
-                    
-                    st.write("Đang trích xuất đặc trưng...")
-                    success, count = extract_frames_from_video(tfile.name, ex_type, phase)
-                    
+                    with st.spinner("Đang chạy MediaPipe…"):
+                        success, count = extract_frames_from_video(tfile.name, ex_type, phase)
                     if success:
-                        st.success(f"✅ Đã trích xuất và lưu {count} frames với nhãn '{phase}'.")
+                        st.success(f"✅ Đã trích xuất và lưu **{count} frames** với nhãn `{phase}`.")
+                        get_dataset.clear()
+                        st.rerun()
                     else:
                         st.error("❌ Không tìm thấy người trong video hoặc có lỗi xảy ra.")
 
-    with tab3:
-        st.write("Huấn luyện mô hình Machine Learning (Random Forest) từ tập dữ liệu đã thu thập.")
-        
-        df = get_dataset()
-        if df is not None and len(df) > 100:
-            st.success(f"Tập dữ liệu hiện có {len(df)} frames. Đã sẵn sàng để huấn luyện!")
-            
-            st.write("### ⚙️ Tùy chỉnh Siêu tham số (Hyperparameters)")
+        # Dataset health
+        df_check = load_real_data()
+        if df_check is not None:
+            st.markdown("---")
+            st.markdown(f"**Tình trạng dataset hiện tại:** `{len(df_check)}` frames | `{df_check['phase_label'].nunique()}` nhãn")
+            needed = max(0, 100 - len(df_check))
+            st.progress(min(len(df_check)/100, 1.0),
+                        text=f"{'✅ Đủ dữ liệu để huấn luyện' if needed == 0 else f'Cần thêm ~{needed} frames nữa'}")
+
+    # ── TAB HUẤN LUYỆN ────────────────────────────────────────────────────
+    with tab_train:
+        df_train = get_dataset()
+        n_samples = len(df_train) if df_train is not None else 0
+
+        if n_samples < 100:
+            st.warning(f"⚠️ Dataset hiện có **{n_samples} frames** — cần ít nhất **100 frames** để huấn luyện. Hãy thu thập thêm dữ liệu.")
+        else:
+            st.success(f"✅ Dataset sẵn sàng: **{n_samples} frames** · **{df_train['phase_label'].nunique()} nhãn**")
+
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown("**⚙️ Tùy chỉnh Siêu tham số (Hyperparameters)**")
             col_hp1, col_hp2, col_hp3 = st.columns(3)
             with col_hp1:
-                n_estimators = st.slider("Số lượng cây (n_estimators)", 50, 300, 100, 50)
+                n_estimators = st.slider("Số cây (n_estimators)", 50, 300, 100, 50)
             with col_hp2:
-                max_depth_opt = st.selectbox("Độ sâu tối đa (max_depth)", ["Không giới hạn", 10, 20, 30])
+                max_depth_opt = st.selectbox("Độ sâu (max_depth)", ["Không giới hạn", 10, 20, 30])
                 max_depth = None if max_depth_opt == "Không giới hạn" else max_depth_opt
             with col_hp3:
-                use_aug = st.checkbox("Sử dụng Data Augmentation (Thêm nhiễu)", value=True)
-                
-            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", width='stretch'):
-                with st.spinner("Đang huấn luyện mô hình..."):
-                    success, msg = train_models(n_estimators=n_estimators, max_depth=max_depth, use_augmentation=use_aug)
-                    if success:
-                        st.success(msg)
-                        st.balloons()
-                        # Clear cache to reload new model
-                        get_model.clear()
-                    else:
-                        st.error(msg)
-        else:
-            st.warning("Cần thu thập ít nhất 100 frames dữ liệu trước khi huấn luyện.")
+                use_aug = st.checkbox("Data Augmentation (thêm nhiễu)", value=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-# ==========================================
-# PAGE 2: DEMO THỰC TẾ
-# ==========================================
-elif page == "🏋️ 2. Triển khai mô hình (Demo)":
-    st.markdown('<p class="main-header">Triển khai mô hình (Demo Thực Tế)</p>', unsafe_allow_html=True)
-    
-    st.write("Tải lên video tập luyện hoàn chỉnh để hệ thống phân tích, đếm số rep và đưa ra nhận xét tư thế.")
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        exercise_type = st.selectbox("Chọn bài tập", ["Push-up", "Squat"], key="demo_ex")
-        uploaded_file = st.file_uploader("Chọn video demo", type=['mp4', 'avi', 'mov'], key="demo_vid")
-        
-    with col2:
-        if uploaded_file is not None:
-            if st.button("🚀 Bắt đầu phân tích", type="primary"):
-                tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') 
+            if st.button("🚀 Bắt đầu Huấn luyện", type="primary", width='stretch'):
+                with st.spinner("⏳ Đang huấn luyện Random Forest…"):
+                    success, msg = train_models(n_estimators=n_estimators, max_depth=max_depth, use_augmentation=use_aug)
+                if success:
+                    st.success(msg)
+                    st.balloons()
+                    get_model.clear()
+                else:
+                    st.error(msg)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 2 — TRIỂN KHAI MÔ HÌNH
+# ══════════════════════════════════════════════════════════════════════════════
+elif "Triển khai" in page:
+
+    page_hero(
+        "Demo thực tế",
+        "Triển khai mô hình",
+        "Upload video tập luyện — AI sẽ đếm rep, theo dõi góc khớp và phân tích tư thế của bạn"
+    )
+
+    if not model_trained:
+        st.warning("⚠️ Mô hình chưa được huấn luyện. Hãy vào trang **Giới thiệu & EDA** → tab **Huấn luyện mô hình** để train trước.")
+
+    tab_demo, tab_test = st.tabs([
+        "🎬  Phân tích Video",
+        "🎯  Kiểm thử Độ chính xác",
+    ])
+
+    # ── TAB PHÂN TÍCH VIDEO ───────────────────────────────────────────────
+    with tab_demo:
+        col_left, col_right = st.columns([1, 2], gap="large")
+
+        with col_left:
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown("**⚙️ Cài đặt phân tích**")
+            exercise_type = st.selectbox("Loại bài tập", ["Push-up", "Squat"], key="demo_ex")
+            uploaded_file = st.file_uploader(
+                "Tải lên video tập luyện",
+                type=['mp4', 'avi', 'mov'], key="demo_vid"
+            )
+            analyze_btn = st.button("▶ Bắt đầu phân tích", type="primary", width='stretch',
+                                    disabled=uploaded_file is None)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="panel" style="background:#f0fdf4;border-color:#bbf7d0;">
+              <div style="font-weight:600;color:#15803d;margin-bottom:8px;">📐 Ngưỡng góc tham khảo</div>
+              <div style="font-size:0.83rem;color:#166534;line-height:1.8;">
+                <strong>Push-up DOWN:</strong> khuỷu tay &lt; 90°<br/>
+                <strong>Push-up UP:</strong> khuỷu tay &gt; 160°<br/>
+                <strong>Squat DOWN:</strong> gối &lt; 90°, hông &lt; 100°<br/>
+                <strong>Squat UP:</strong> gối &gt; 160°, hông &gt; 160°
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_right:
+            if uploaded_file is not None and analyze_btn:
+                tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                 tfile.write(uploaded_file.read())
-                
+
                 cap = cv2.VideoCapture(tfile.name)
                 total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                
-                st.write("Đang xử lý video...")
-                progress_bar = st.progress(0)
-                
-                # Metrics UI
+
+                progress_bar = st.progress(0, text="Đang xử lý…")
+
+                # Live metrics row
                 m1, m2, m3 = st.columns(3)
-                rep_metric = m1.empty()
+                rep_metric   = m1.empty()
                 state_metric = m2.empty()
-                conf_metric = m3.empty()
-                
+                conf_metric  = m3.empty()
                 frame_window = st.empty()
-                
+
                 processor = PoseProcessor()
-                
                 reps = 0
                 current_state = "UP"
                 frame_count = 0
-                
                 window_size = 30
                 angle_history = []
                 plot_data = {'frame': [], 'angle': []}
-                
                 start_time = time.time()
-                
+
                 while cap.isOpened():
                     ret, frame = cap.read()
                     if not ret:
                         break
-                        
+
                     frame_count += 1
                     landmarks = processor.extract_keypoints(frame)
-                    angles = processor.get_exercise_angles(landmarks)
-                    
+                    angles    = processor.get_exercise_angles(landmarks)
+
                     state = "UNKNOWN"
-                    feedback = ""
                     confidence = 0.0
-                    
+                    feedback = ""
+
                     if angles:
                         main_angle = angles['angle_elbow'] if exercise_type == "Push-up" else angles['angle_knee']
                         plot_data['frame'].append(frame_count)
                         plot_data['angle'].append(main_angle)
-                        
+
                         if model_trained:
                             norm_angles = [
-                                angles['angle_elbow']/180.0, 
-                                angles['angle_hip']/180.0, 
-                                angles['angle_knee']/180.0
+                                angles['angle_elbow'] / 180.0,
+                                angles['angle_hip']   / 180.0,
+                                angles['angle_knee']  / 180.0,
                             ]
                             angle_history.append(norm_angles)
-                            
                             if len(angle_history) > window_size:
                                 angle_history.pop(0)
-                                
                             if len(angle_history) == window_size:
                                 window_arr = np.array(angle_history)
                                 pred_phase, confidence = predict_phase(model, scaler, le, window_arr)
-                                
                                 if "down" in pred_phase:
                                     state = "DOWN"
                                 elif "up" in pred_phase:
@@ -366,331 +890,451 @@ elif page == "🏋️ 2. Triển khai mô hình (Demo)":
                         else:
                             state = processor.classify_state(angles, exercise_type)
                             confidence = 1.0
-                            
+
                         if state == "DOWN" and current_state == "UP":
                             current_state = "DOWN"
                         elif state == "UP" and current_state == "DOWN":
                             current_state = "UP"
                             reps += 1
-                            
+
                         feedback = processor.get_feedback(angles, exercise_type, current_state)
                         frame = processor.draw_overlay(frame, landmarks, state, reps, exercise_type, feedback)
-                        
-                    # Update Metrics UI
-                    rep_metric.metric("Số Reps", reps)
-                    state_metric.metric("Trạng thái", state)
-                    conf_metric.metric("Độ tin cậy (Confidence)", f"{confidence*100:.1f}%")
-                        
+
+                    rep_metric.metric("🔢 Số Reps",    reps)
+                    state_metric.metric("📍 Trạng thái", state)
+                    conf_metric.metric("🎯 Confidence", f"{confidence*100:.1f}%")
+
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame_window.image(frame_rgb, channels="RGB", use_column_width=True)
-                    
+                    frame_window.image(frame_rgb, channels="RGB", width='stretch')
+
                     if total_frames > 0:
-                        progress_bar.progress(min(frame_count / total_frames, 1.0))
-                    
+                        progress_bar.progress(min(frame_count / total_frames, 1.0),
+                                              text=f"Frame {frame_count}/{total_frames}")
+
                 cap.release()
                 exec_time = time.time() - start_time
-                
                 save_workout_history(exercise_type, reps, exec_time)
-                
-                st.success("✅ Xử lý hoàn tất! Kết quả đã được lưu vào Lịch sử tập luyện.")
-                
+
+                st.success(f"✅ Hoàn tất! Đếm được **{reps} reps** trong {exec_time:.1f}s — đã lưu vào lịch sử.")
+
                 if plot_data['frame']:
-                    fig = px.line(x=plot_data['frame'], y=plot_data['angle'], 
-                                 labels={'x': 'Frame', 'y': 'Góc (độ)'},
-                                 title="Biểu đồ góc theo thời gian")
-                    st.plotly_chart(fig, width='stretch')
+                    angle_label = "Góc Khuỷu tay (°)" if exercise_type == "Push-up" else "Góc Gối (°)"
+                    fig_angle = px.area(
+                        x=plot_data['frame'], y=plot_data['angle'],
+                        labels={'x': 'Frame', 'y': angle_label},
+                        title=f"📈 Biến thiên {angle_label} theo thời gian",
+                        color_discrete_sequence=['#4ade80'],
+                        template="plotly_white"
+                    )
+                    fig_angle.update_traces(fillcolor='rgba(74,222,128,0.15)', line_color='#16a34a')
+                    fig_angle.update_layout(title_font_family="Syne", margin=dict(t=50, b=20))
+                    st.plotly_chart(fig_angle, width='stretch')
 
-# ==========================================
-# PAGE 3: KIỂM THỬ & ĐÁNH GIÁ
-# ==========================================
-elif page == "📈 3. Đánh giá & Hiệu năng":
-    st.markdown('<p class="main-header">Đánh giá & Hiệu năng (Evaluation)</p>', unsafe_allow_html=True)
-    
-    tab1, tab2 = st.tabs(["📊 Chỉ số & Biểu đồ kỹ thuật", "🎯 Kiểm thử Video Thực Tế"])
-    
-    with tab1:
-        metrics = load_metrics()
-        if not metrics:
-            st.info("Chưa có dữ liệu đánh giá. Vui lòng huấn luyện mô hình trước.")
-        else:
-            st.write("### 1. Các chỉ số đo lường (Metrics)")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Accuracy (Tập Test)", f"{metrics.get('accuracy', 0)*100:.2f}%")
-            c2.metric("F1-Score", f"{metrics.get('f1_score', 0)*100:.2f}%")
-            c3.metric("Precision", f"{metrics.get('precision', 0)*100:.2f}%")
-            
-            # Biểu đồ so sánh các chỉ số
-            metrics_df = pd.DataFrame({
-                'Metric': ['Accuracy', 'F1-Score', 'Precision'],
-                'Score': [metrics.get('accuracy', 0)*100, metrics.get('f1_score', 0)*100, metrics.get('precision', 0)*100]
-            })
-            fig_metrics = px.bar(metrics_df, x='Metric', y='Score', color='Metric', text='Score', 
-                                 title="So sánh Tổng quan các Chỉ số Đánh giá", range_y=[0, 100])
-            fig_metrics.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-            st.plotly_chart(fig_metrics, width='stretch')
-            
-            st.write("### 2. Biểu đồ Kỹ thuật")
-            col_chart1, col_chart2 = st.columns(2)
-            
-            with col_chart1:
-                st.write("**Confusion Matrix**")
-                cm = np.array(metrics.get('confusion_matrix', []))
-                classes = metrics.get('classes', [])
-                
-                if len(cm) > 0 and len(classes) > 0:
-                    fig_cm = px.imshow(cm, x=classes, y=classes, text_auto=True, 
-                                      color_continuous_scale='Blues', aspect="auto")
-                    fig_cm.update_layout(xaxis_title="Predicted Label", yaxis_title="True Label")
-                    st.plotly_chart(fig_cm, width='stretch')
-                    
-            with col_chart2:
-                st.write("**Mức độ quan trọng của Đặc trưng (Feature Importance)**")
-                if model_trained and hasattr(model, 'feature_importances_'):
-                    # Random Forest feature importances
-                    importances = model.feature_importances_
-                    # We have window_size * 3 + 3 features. Just show top 10.
-                    indices = np.argsort(importances)[::-1][:10]
-                    top_importances = importances[indices]
-                    top_features = [f"Feature {i}" for i in indices]
-                    
-                    fig_fi = px.bar(x=top_importances, y=top_features, orientation='h',
-                                   labels={'x': 'Mức độ quan trọng', 'y': 'Đặc trưng'},
-                                   title="Top 10 Đặc trưng quan trọng nhất")
-                    fig_fi.update_layout(yaxis={'categoryorder':'total ascending'})
-                    st.plotly_chart(fig_fi, width='stretch')
-                else:
-                    st.info("Không có thông tin Feature Importance.")
-                    
-            st.write("### 3. Phân tích sai số (Error Analysis)")
-            st.markdown("""
-            **Nhận định về các trường hợp dự đoán sai:**
-            - **Nhầm lẫn ở pha Transition:** Mô hình thường gặp khó khăn tại ranh giới giữa pha `UP` và `DOWN`. Khi người tập dừng lại ở giữa chừng, góc khớp nằm ở mức lấp lửng, khiến độ tin cậy (Confidence) giảm mạnh.
-            - **Sai lệch do góc quay:** Nếu camera đặt quá cao hoặc quá thấp, tỷ lệ cơ thể bị méo mó (perspective distortion), dẫn đến góc khớp do MediaPipe tính toán bị sai lệch so với thực tế.
-            - **Tốc độ thực hiện:** Các rep thực hiện quá nhanh (motion blur) làm MediaPipe mất dấu keypoints, tạo ra các frame nhiễu.
-            
-            **Hướng cải thiện:**
-            1. **Thu thập thêm dữ liệu đa dạng:** Bổ sung video từ nhiều góc quay khác nhau (chính diện, chéo 45 độ, ngang 90 độ) và nhiều điều kiện ánh sáng.
-            2. **Áp dụng bộ lọc Kalman (Kalman Filter):** Làm mượt tọa độ keypoints trước khi đưa vào tính góc để giảm thiểu nhiễu do motion blur.
-            3. **Chuyển đổi sang mô hình LSTM/GRU:** Thay vì dùng Sliding Window kết hợp Random Forest, mạng RNN (như LSTM) có khả năng ghi nhớ ngữ cảnh dài hạn tốt hơn, giúp xử lý các pha dừng nghỉ giữa chừng hiệu quả hơn.
-            """)
+            elif uploaded_file is None:
+                st.markdown("""
+                <div class="panel" style="text-align:center;padding:60px 40px;background:#f8fafc;">
+                  <div style="font-size:4rem;margin-bottom:16px;">🎥</div>
+                  <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#0f172a;margin-bottom:8px;">
+                    Chờ video để bắt đầu
+                  </div>
+                  <div style="font-size:0.88rem;color:#94a3b8;">
+                    Upload file .mp4 / .avi / .mov ở cột bên trái
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-    with tab2:
-        st.write("Đưa vào video test và số rep thực tế để kiểm tra độ chính xác của mô hình.")
-        
-        col1, col2 = st.columns([1, 2])
+    # ── TAB KIỂM THỬ ─────────────────────────────────────────────────────
+    with tab_test:
+        st.markdown("""
+        <div class="panel">
+          Nhập video có <strong>số rep biết trước</strong> để đo sai số của mô hình.
+          Kết quả sẽ tính <em>MAE</em> và <em>Accuracy đếm rep</em> cho video cụ thể đó.
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns([1, 1], gap="large")
         with col1:
-            test_ex_type = st.selectbox("Loại bài tập", ["Push-up", "Squat"], key="test_ex")
-            actual_reps = st.number_input("Số Reps thực tế trong video", min_value=1, value=5)
-            uploaded_test_vid = st.file_uploader("Chọn video test", type=['mp4', 'avi', 'mov'], key="test_vid")
-            
+            test_ex_type  = st.selectbox("Loại bài tập", ["Push-up", "Squat"], key="test_ex")
+            actual_reps   = st.number_input("Số Reps thực tế trong video", min_value=1, value=5)
+            uploaded_test = st.file_uploader("Chọn video kiểm thử", type=['mp4', 'avi', 'mov'], key="test_vid")
+
         with col2:
-            if uploaded_test_vid is not None and model_trained:
-                if st.button("Bắt đầu Kiểm thử", type="primary"):
-                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') 
-                    tfile.write(uploaded_test_vid.read())
-                    
-                    st.write("Đang chạy kiểm thử...")
-                    
+            if uploaded_test and model_trained:
+                if st.button("🔬 Bắt đầu kiểm thử", type="primary", width='stretch'):
+                    tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+                    tfile.write(uploaded_test.read())
+
                     cap = cv2.VideoCapture(tfile.name)
                     processor = PoseProcessor()
-                    
-                    reps = 0
-                    current_state = "UP"
+                    reps, current_state = 0, "UP"
                     angle_history = []
                     window_size = 30
-                    
-                    progress_bar = st.progress(0)
                     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    frame_count = 0
+                    frame_count  = 0
+                    bar = st.progress(0, text="Đang kiểm thử…")
                     start_time = time.time()
-                    
+
                     while cap.isOpened():
                         ret, frame = cap.read()
                         if not ret:
                             break
-                            
                         frame_count += 1
                         landmarks = processor.extract_keypoints(frame)
-                        angles = processor.get_exercise_angles(landmarks)
-                        
+                        angles    = processor.get_exercise_angles(landmarks)
                         if angles:
-                            norm_angles = [
-                                angles['angle_elbow']/180.0, 
-                                angles['angle_hip']/180.0, 
-                                angles['angle_knee']/180.0
-                            ]
-                            angle_history.append(norm_angles)
-                            
+                            norm = [angles['angle_elbow']/180.0,
+                                    angles['angle_hip']/180.0,
+                                    angles['angle_knee']/180.0]
+                            angle_history.append(norm)
                             if len(angle_history) > window_size:
                                 angle_history.pop(0)
-                                
                             if len(angle_history) == window_size:
                                 window_arr = np.array(angle_history)
-                                pred_phase, _ = predict_phase(model, scaler, le, window_arr)
-                                
-                                if "down" in pred_phase:
-                                    state = "DOWN"
-                                elif "up" in pred_phase:
-                                    state = "UP"
-                                else:
-                                    state = "UNKNOWN"
-                                    
+                                pred, _ = predict_phase(model, scaler, le, window_arr)
+                                state = "DOWN" if "down" in pred else ("UP" if "up" in pred else "UNKNOWN")
                                 if state == "DOWN" and current_state == "UP":
                                     current_state = "DOWN"
                                 elif state == "UP" and current_state == "DOWN":
                                     current_state = "UP"
                                     reps += 1
-                                    
                         if total_frames > 0:
-                            progress_bar.progress(min(frame_count / total_frames, 1.0))
-                            
+                            bar.progress(min(frame_count / total_frames, 1.0))
+
                     cap.release()
                     exec_time = time.time() - start_time
-                    
-                    error = abs(reps - actual_reps)
+                    error    = abs(reps - actual_reps)
                     accuracy = max(0, 100 - (error / actual_reps * 100)) if actual_reps > 0 else 0
-                    
                     save_workout_history(test_ex_type, reps, exec_time, accuracy=f"{accuracy:.1f}%")
-                    
+
                     st.success("✅ Kiểm thử hoàn tất!")
-                    
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Số Reps Thực Tế", actual_reps)
-                    m2.metric("Số Reps Dự Đoán", reps, delta=reps-actual_reps)
-                    m3.metric("Độ Chính Xác", f"{accuracy:.1f}%")
-                    
+                    r1, r2, r3 = st.columns(3)
+                    r1.metric("Reps thực tế",   actual_reps)
+                    r2.metric("Reps dự đoán",   reps, delta=reps - actual_reps)
+                    r3.metric("Độ chính xác",   f"{accuracy:.1f}%")
+
+                    # Quick gauge
+                    fig_gauge = go.Figure(go.Indicator(
+                        mode="gauge+number", value=accuracy,
+                        title={'text': "Accuracy (%)", 'font': {'family': 'Syne'}},
+                        gauge={'axis': {'range': [0, 100]},
+                               'bar': {'color': "#16a34a"},
+                               'steps': [
+                                   {'range': [0,  60],  'color': '#fecaca'},
+                                   {'range': [60, 80],  'color': '#fed7aa'},
+                                   {'range': [80, 100], 'color': '#bbf7d0'},
+                               ]
+                               }
+                    ))
+                    fig_gauge.update_layout(height=280, margin=dict(t=40, b=10))
+                    st.plotly_chart(fig_gauge, width='stretch')
+
             elif not model_trained:
-                st.warning("Vui lòng huấn luyện mô hình trước khi kiểm thử.")
+                st.warning("Cần huấn luyện mô hình trước.")
 
-# ==========================================
-# PAGE 4: LỊCH SỬ TẬP LUYỆN
-# ==========================================
-elif page == "📅 4. Lịch sử Tập luyện":
-    st.markdown('<p class="main-header">Lịch sử Tập luyện</p>', unsafe_allow_html=True)
-    
-    history_file = 'data/workout_history.csv'
-    if os.path.exists(history_file):
-        history_df = pd.read_csv(history_file)
-        
-        if not history_df.empty:
-            st.write("### 📊 Thống kê Tổng quan")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Tổng số lần tập", len(history_df))
-            c2.metric("Tổng số Reps", history_df['reps'].sum())
-            c3.metric("Tổng thời gian (s)", round(history_df['duration_seconds'].sum(), 1))
-            
-            st.write("### 📈 Phân tích Lịch sử Tập luyện")
-            col_hist1, col_hist2 = st.columns(2)
-            
-            with col_hist1:
-                fig_hist_bar = px.bar(history_df, x='date', y='reps', color='exercise', 
-                             title="Số Reps qua các buổi tập",
-                             labels={'date': 'Thời gian', 'reps': 'Số Reps', 'exercise': 'Bài tập'})
-                st.plotly_chart(fig_hist_bar, width='stretch')
-                
-            with col_hist2:
-                ex_reps = history_df.groupby('exercise')['reps'].sum().reset_index()
-                fig_hist_pie = px.pie(ex_reps, values='reps', names='exercise', 
-                                      title="Tỷ trọng Reps theo Bài tập", hole=0.4,
-                                      color_discrete_sequence=px.colors.sequential.RdBu)
-                st.plotly_chart(fig_hist_pie, width='stretch')
-            
-            st.write("### 📋 Chi tiết các buổi tập")
-            st.dataframe(history_df.sort_values(by='date', ascending=False), width='stretch')
-            
-            if st.button("🗑️ Xóa Lịch sử", type="secondary"):
-                os.remove(history_file)
-                st.success("Đã xóa lịch sử tập luyện!")
-                st.rerun()
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 3 — ĐÁNH GIÁ & HIỆU NĂNG
+# ══════════════════════════════════════════════════════════════════════════════
+elif "Đánh giá" in page:
+
+    page_hero(
+        "Evaluation",
+        "Đánh giá & Hiệu năng",
+        "Các chỉ số kỹ thuật, Confusion Matrix, phân tích sai số và lịch sử tập luyện"
+    )
+
+    tab_metrics, tab_history, tab_report = st.tabs([
+        "📊  Chỉ số & Biểu đồ",
+        "📅  Lịch sử Tập luyện",
+        "📄  Báo cáo Kỹ thuật",
+    ])
+
+    # ── TAB METRICS ────────────────────────────────────────────────────────
+    with tab_metrics:
+        metrics = load_metrics()
+
+        if not metrics:
+            st.info("Chưa có dữ liệu đánh giá. Hãy huấn luyện mô hình trước.")
         else:
-            st.info("Chưa có dữ liệu lịch sử tập luyện.")
-    else:
-        st.info("Chưa có dữ liệu lịch sử tập luyện. Hãy thực hiện Demo hoặc Kiểm thử để lưu lại kết quả.")
+            # KPI row
+            acc = metrics.get('accuracy', 0) * 100
+            f1  = metrics.get('f1_score', 0) * 100
+            prec= metrics.get('precision', 0) * 100
 
-# ==========================================
-# PAGE 5: BÁO CÁO HỌC MÁY
-# ==========================================
-elif page == "📄 5. Báo cáo chi tiết":
-    st.markdown('<p class="main-header">Báo Cáo Nghiên Cứu Học Máy</p>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy</p>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    ---
-    ### 1. XÁC LẬP BÀI TOÁN
-    
-    **Bối cảnh thực tế & Động lực nghiên cứu**  
-    Sự gia tăng của xu hướng tập luyện tại nhà (home workout) đặt ra một thách thức lớn: thiếu sự giám sát của huấn luyện viên (PT). Người tập thường đối mặt với hai vấn đề cốt lõi: sai tư thế (dẫn đến chấn thương) và đếm sai số lần tập (ảnh hưởng đến tiến độ và động lực). 
-    
-    **Tại sao chọn Push-up và Squat?**  
-    Nghiên cứu tập trung vào hai bài tập này vì chúng là đại diện tiêu biểu cho các nhóm cơ phần trên (upper body) và phần dưới (lower body). Hơn nữa, đây là các bài tập đa khớp (compound movements) có tính chu kỳ rõ rệt, rất phù hợp để làm cơ sở đánh giá các mô hình nhận diện chuỗi thời gian. Việc "đếm số lần" (counting) mang lại giá trị định lượng quan trọng hơn việc chỉ "nhận diện" (classification) hành động, vì nó trực tiếp phục vụ việc theo dõi tiến độ tập luyện.
-    
-    **Đặc thù và Thách thức của Dữ liệu**  
-    Dữ liệu đầu vào là video từ webcam hoặc điện thoại di động. Đây là nguồn dữ liệu "in-the-wild" mang tính thách thức cao do:
-    - **Nhiễu (Noise):** Ánh sáng yếu, background phức tạp.
-    - **Occlusion (Che khuất):** Các bộ phận cơ thể tự che khuất nhau ở một số góc quay.
-    - **Góc nhìn (Viewpoint):** Người dùng hiếm khi đặt camera ở góc chuẩn 90 độ.
-    
-    ---
-    ### 2. TIỀN XỬ LÝ & TRÍCH XUẤT ĐẶC TRƯNG
-    
-    **Tại sao sử dụng MediaPipe Pose thay vì Raw Video?**  
-    Việc đưa trực tiếp chuỗi ảnh (raw frames) vào các mô hình 3D-CNN đòi hỏi tài nguyên tính toán khổng lồ và rất dễ bị overfit vào bối cảnh (background). MediaPipe Pose đóng vai trò như một bộ lọc thông tin, chuyển đổi không gian ảnh RGB nhiều chiều thành một vector 33 điểm neo (keypoints) 3D. Điều này giúp:
-    1. Giảm triệt để chiều dữ liệu.
-    2. Tăng tính bất biến (invariance) với ánh sáng, màu da, và quần áo.
-    
-    **Chiến lược Chuẩn hóa (Normalization)**  
-    Tọa độ pixel thô không có ý nghĩa học máy nếu người tập đứng gần hoặc xa camera. Do đó, dữ liệu được chuẩn hóa bằng cách:
-    - **Centering:** Tịnh tiến gốc tọa độ về điểm giữa hông (mid-hip), loại bỏ sự phụ thuộc vào vị trí camera.
-    - **Scaling:** Chia tọa độ cho chiều cao thân người (khoảng cách vai - hông), giúp mô hình hoạt động ổn định bất kể chiều cao thực tế của người dùng.
-    
-    **Lựa chọn Đặc trưng (Feature Engineering)**  
-    Thay vì dùng trực tiếp tọa độ (x, y, z), nghiên cứu trích xuất **Góc khớp (Joint Angles)** (ví dụ: góc khuỷu tay, góc đầu gối).  
-    *Tại sao?* Vì góc khớp là đại lượng bất biến với phép quay và phép tịnh tiến của camera. Nó phản ánh trực tiếp cơ sinh học (biomechanics) của chuyển động. Một chuỗi các góc khớp theo thời gian (time-series) sẽ mô tả trọn vẹn một chu kỳ Lên-Xuống của bài tập.
-    
-    **Vai trò của Lọc nhiễu (Smoothing)**  
-    MediaPipe thường gặp hiện tượng "jitter" (rung lắc điểm neo) ở các frame mờ. Nếu không có bộ lọc (như Moving Average hay Kalman Filter), các đỉnh nhiễu này sẽ đánh lừa logic đếm, tạo ra các "false reps" (đếm khống).
-    
-    ---
-    ### 3. THỰC THI MÔ HÌNH
-    
-    **Phân tích các hướng tiếp cận:**
-    - **(A) Rule-based (Dựa trên ngưỡng góc):** Dễ triển khai (VD: góc gối < 90° là xuống). *Nhược điểm:* Quá cứng nhắc. Mỗi người có biên độ khớp và tỷ lệ cơ thể khác nhau, một ngưỡng cố định sẽ thất bại trên diện rộng.
-    - **(B) Machine Learning (Random Forest / SVM):** Rất phù hợp với dữ liệu dạng bảng (tabular data) như các góc khớp. Random Forest có khả năng xử lý tốt các mối quan hệ phi tuyến tính và ít bị overfit trên tập dữ liệu nhỏ.
-    - **(C) Deep Learning (LSTM / GRU):** Là lựa chọn tối ưu về mặt lý thuyết vì bản chất bài tập là chuỗi thời gian. *Tuy nhiên*, LSTM đòi hỏi lượng dữ liệu lớn để hội tụ.
-    
-    **Quyết định thiết kế (Design Choice):**  
-    Hệ thống hiện tại sử dụng **Random Forest** kết hợp với phương pháp **Sliding Window** (Cửa sổ trượt). Bằng cách đưa một chuỗi $N$ frames liên tiếp vào Random Forest, mô hình có thể nắm bắt được bối cảnh thời gian (temporal context) mà không cần kiến trúc phức tạp như LSTM, cân bằng hoàn hảo giữa độ chính xác và tốc độ suy luận (inference speed) trên CPU.
-    
-    **Tầm quan trọng của Online Learning / Lưu dữ liệu:**  
-    Hệ thống cho phép người dùng tự thu thập video của chính mình để huấn luyện lại mô hình. Điều này tạo ra một hệ thống *Adaptive* (thích nghi), giúp mô hình tinh chỉnh (fine-tune) theo đúng form tập và góc quay quen thuộc của từng cá nhân, giải quyết triệt để bài toán "out-of-distribution".
-    
-    ---
-    ### 4. PHÂN TÍCH & ĐÁNH GIÁ
-    
-    **Lựa chọn Metrics đánh giá:**
-    - **Accuracy:** Đánh giá khả năng phân loại đúng trạng thái (Up/Down) trên từng frame.
-    - **Precision/Recall:** Cực kỳ quan trọng để tránh đếm sai. Recall thấp nghĩa là bỏ sót rep (undercounting), Precision thấp nghĩa là đếm khống (overcounting).
-    - **MAE (Mean Absolute Error):** Là metric thực tiễn nhất, đo lường sai lệch giữa số rep máy đếm và số rep thực tế do con người gán nhãn.
-    
-    **Nhận xét từ Confusion Matrix & Loss:**  
-    Confusion Matrix giúp phát hiện các điểm mù của mô hình. Thường mô hình sẽ nhầm lẫn ở pha "Transition" (chuyển giao giữa Lên và Xuống). Việc trực quan hóa Prediction vs Ground Truth trên biểu đồ sóng (wave plot) cho thấy rõ: mô hình hoạt động cực tốt khi người dùng tập đúng nhịp, nhưng sẽ gặp khó khăn nếu người dùng dừng lại nghỉ quá lâu ở giữa một rep.
-    
-    **Sự đánh đổi (Trade-offs):**  
-    Hệ thống chấp nhận hy sinh một phần nhỏ Accuracy (bằng cách dùng mô hình nhẹ như Random Forest thay vì các mạng Transformer nặng nề) để đổi lấy **Real-time Speed** (tốc độ xử lý thời gian thực) – yếu tố sống còn của một ứng dụng Fitness.
-    
-    ---
-    ### 5. RỦI RO, ĐẠO ĐỨC & HƯỚNG MỞ RỘNG
-    
-    **Phân tích rủi ro (Risk Analysis):**  
-    Điểm yếu chí mạng của hệ thống là sự phụ thuộc hoàn toàn vào MediaPipe. Nếu MediaPipe thất bại trong việc nhận diện bộ xương (do ánh sáng quá tối hoặc mặc đồ quá rộng), toàn bộ pipeline phía sau sẽ sụp đổ (Cascading Failure). Ngoài ra, với lượng dữ liệu nhỏ, mô hình dễ bị overfitting vào góc quay cụ thể.
-    
-    **So sánh với các giải pháp khác:**  
-    So với việc dùng cảm biến đeo tay (wearable sensors) hay camera hồng ngoại (Kinect), giải pháp Vision-based qua webcam có độ chính xác thấp hơn một chút nhưng lại vượt trội hoàn toàn về tính tiện lợi, chi phí bằng 0 và khả năng tiếp cận đại chúng.
-    
-    **Đạo đức & Quyền riêng tư (Ethics & Privacy):**  
-    Video tập luyện chứa hình ảnh nhạy cảm và không gian riêng tư của người dùng. Giải pháp thiết kế ở đây là **Edge Computing**: toàn bộ quá trình trích xuất MediaPipe và suy luận ML được thực hiện cục bộ (local) trên thiết bị. Không có raw video nào được gửi lên server, đảm bảo tuyệt đối quyền riêng tư.
-    
-    **Định hướng tương lai (Future Work):**
-    1. **Mở rộng bài tập:** Kiến trúc hiện tại hoàn toàn có thể scale lên các bài tập khác như Plank, Pull-up, Jumping Jacks chỉ bằng cách thay đổi tập dữ liệu huấn luyện.
-    2. **AI Coach (Huấn luyện viên AI):** Chuyển từ "Passive Counting" (chỉ đếm) sang "Active Correction" (chủ động sửa sai). Bằng cách phân tích quỹ đạo góc khớp, hệ thống có thể phát ra cảnh báo âm thanh realtime: *"Bạn đang chụm đầu gối quá nhiều"* hoặc *"Hãy xuống sâu hơn"*.
-    """)
+            st.markdown(f"""
+            <div class="stat-row">
+              <div class="stat-card" style="border-top:3px solid #4ade80;">
+                <div class="label">Accuracy</div>
+                <div class="value accent">{acc:.1f}<span style="font-size:1.2rem;">%</span></div>
+                <div class="unit">Tập kiểm tra (test set)</div>
+              </div>
+              <div class="stat-card" style="border-top:3px solid #38bdf8;">
+                <div class="label">F1-Score</div>
+                <div class="value" style="color:#0284c7;">{f1:.1f}<span style="font-size:1.2rem;">%</span></div>
+                <div class="unit">Weighted average</div>
+              </div>
+              <div class="stat-card" style="border-top:3px solid #a78bfa;">
+                <div class="label">Precision</div>
+                <div class="value" style="color:#7c3aed;">{prec:.1f}<span style="font-size:1.2rem;">%</span></div>
+                <div class="unit">Weighted average</div>
+              </div>
+              <div class="stat-card" style="border-top:3px solid #fb923c;">
+                <div class="label">Mô hình</div>
+                <div class="value" style="font-size:1.2rem;color:#ea580c;">RF</div>
+                <div class="unit">Random Forest · CPU</div>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Metrics bar
+            metrics_df = pd.DataFrame({
+                'Chỉ số':  ['Accuracy', 'F1-Score', 'Precision'],
+                'Điểm (%)': [acc, f1, prec]
+            })
+            fig_bar = px.bar(
+                metrics_df, x='Chỉ số', y='Điểm (%)', color='Chỉ số', text='Điểm (%)',
+                title="So sánh tổng quan các chỉ số đánh giá",
+                color_discrete_sequence=['#4ade80', '#38bdf8', '#a78bfa'],
+                range_y=[0, 110], template="plotly_white"
+            )
+            fig_bar.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+            fig_bar.update_layout(showlegend=False, title_font_family="Syne",
+                                  margin=dict(t=50, b=10))
+            st.plotly_chart(fig_bar, width='stretch')
+
+            section_heading("🗂️ Biểu đồ kỹ thuật")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                cm      = np.array(metrics.get('confusion_matrix', []))
+                classes = metrics.get('classes', [])
+                if len(cm) > 0 and len(classes) > 0:
+                    fig_cm = px.imshow(
+                        cm, x=classes, y=classes, text_auto=True,
+                        color_continuous_scale='Greens', aspect="auto",
+                        title="Confusion Matrix"
+                    )
+                    fig_cm.update_layout(
+                        xaxis_title="Nhãn Dự đoán", yaxis_title="Nhãn Thực tế",
+                        title_font_family="Syne", margin=dict(t=50, b=20)
+                    )
+                    st.plotly_chart(fig_cm, width='stretch')
+
+            with col2:
+                if model_trained and hasattr(model, 'feature_importances_'):
+                    importances = model.feature_importances_
+                    indices     = np.argsort(importances)[::-1][:12]
+                    top_vals    = importances[indices]
+                    top_names   = [f"Feature {i}" for i in indices]
+
+                    fig_fi = px.bar(
+                        x=top_vals, y=top_names, orientation='h',
+                        labels={'x': 'Mức độ quan trọng', 'y': 'Đặc trưng'},
+                        title="Top 12 đặc trưng quan trọng nhất",
+                        color=top_vals,
+                        color_continuous_scale='Greens',
+                        template="plotly_white"
+                    )
+                    fig_fi.update_layout(
+                        yaxis={'categoryorder': 'total ascending'},
+                        showlegend=False, coloraxis_showscale=False,
+                        title_font_family="Syne", margin=dict(t=50, b=20)
+                    )
+                    st.plotly_chart(fig_fi, width='stretch')
+                else:
+                    st.info("Không có dữ liệu Feature Importance.")
+
+            section_heading("🔍 Phân tích sai số")
+            st.markdown("""
+            <div class="panel">
+            <table class="error-table">
+              <thead>
+                <tr>
+                  <th>Trường hợp lỗi</th>
+                  <th>Mức độ</th>
+                  <th>Nguyên nhân</th>
+                  <th>Hướng khắc phục</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Nhầm ở pha Transition</strong></td>
+                  <td><span class="tag">Cao</span></td>
+                  <td>Góc khớp ở ranh giới UP/DOWN — confidence thấp</td>
+                  <td>Thêm hysteresis threshold, dùng LSTM thay RF</td>
+                </tr>
+                <tr>
+                  <td><strong>Góc quay lệch</strong></td>
+                  <td><span class="tag tag-warn">Trung bình</span></td>
+                  <td>Camera quá cao/thấp → perspective distortion</td>
+                  <td>Chuẩn hóa theo tỷ lệ thân người trước khi tính góc</td>
+                </tr>
+                <tr>
+                  <td><strong>Tốc độ thực hiện nhanh</strong></td>
+                  <td><span class="tag tag-warn">Trung bình</span></td>
+                  <td>Motion blur → MediaPipe mất keypoints</td>
+                  <td>Kalman filter trên chuỗi keypoints, interpolation</td>
+                </tr>
+                <tr>
+                  <td><strong>Dừng nghỉ giữa rep</strong></td>
+                  <td><span class="tag tag-ok">Thấp</span></td>
+                  <td>State machine không phân biệt dừng vs xuống</td>
+                  <td>Thêm trạng thái HOLD, timeout reset state</td>
+                </tr>
+                <tr>
+                  <td><strong>Ánh sáng yếu / ngược sáng</strong></td>
+                  <td><span class="tag">Cao</span></td>
+                  <td>MediaPipe detection confidence &lt; 0.5 → bỏ frame</td>
+                  <td>Tiền xử lý ảnh (histogram eq), hạ threshold detect</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+            """, unsafe_allow_html=True)
+
+            with st.expander("💡 Định hướng cải thiện chi tiết"):
+                st.markdown("""
+                1. **Mở rộng dataset:** Thêm video từ nhiều góc quay (chính diện, chéo 45°, ngang 90°) và điều kiện ánh sáng khác nhau.
+                2. **Kalman Filter:** Làm mượt chuỗi keypoints trước khi tính góc, giảm false reps do jitter.
+                3. **LSTM / GRU:** Thay Sliding Window + RF bằng mạng RNN để ghi nhớ ngữ cảnh dài hơn.
+                4. **Personalization:** Cho phép người dùng tự thu thập data cá nhân và fine-tune — mô hình sẽ thích nghi theo form tập riêng.
+                5. **Multi-angle fusion:** Kết hợp 2 camera (ngang + chéo) để tăng robustness.
+                """)
+
+    # ── TAB LỊCH SỬ TẬP LUYỆN ────────────────────────────────────────────
+    with tab_history:
+        history_file = 'data/workout_history.csv'
+
+        if os.path.exists(history_file):
+            history_df = pd.read_csv(history_file)
+            if not history_df.empty:
+                total_sessions = len(history_df)
+                total_reps     = history_df['reps'].sum()
+                total_time     = round(history_df['duration_seconds'].sum(), 0)
+
+                st.markdown(f"""
+                <div class="stat-row">
+                  <div class="stat-card" style="border-top:3px solid #4ade80;">
+                    <div class="label">Số buổi tập</div>
+                    <div class="value accent">{total_sessions}</div>
+                    <div class="unit">phiên</div>
+                  </div>
+                  <div class="stat-card" style="border-top:3px solid #38bdf8;">
+                    <div class="label">Tổng số Reps</div>
+                    <div class="value" style="color:#0284c7;">{total_reps:,}</div>
+                    <div class="unit">lần</div>
+                  </div>
+                  <div class="stat-card" style="border-top:3px solid #fb923c;">
+                    <div class="label">Tổng thời gian</div>
+                    <div class="value" style="color:#ea580c;">{int(total_time)}</div>
+                    <div class="unit">giây</div>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col_h1, col_h2 = st.columns(2)
+                with col_h1:
+                    fig_bar_h = px.bar(
+                        history_df, x='date', y='reps', color='exercise',
+                        title="Số Reps qua các buổi tập",
+                        color_discrete_sequence=['#4ade80', '#38bdf8'],
+                        template="plotly_white"
+                    )
+                    fig_bar_h.update_layout(
+                        title_font_family="Syne", xaxis_tickangle=-30,
+                        legend_title_text='Bài tập', margin=dict(t=50, b=20)
+                    )
+                    st.plotly_chart(fig_bar_h, width='stretch')
+
+                with col_h2:
+                    ex_reps = history_df.groupby('exercise')['reps'].sum().reset_index()
+                    fig_pie = px.pie(
+                        ex_reps, values='reps', names='exercise',
+                        title="Tỷ trọng Reps theo Bài tập", hole=0.45,
+                        color_discrete_sequence=['#4ade80', '#38bdf8'],
+                        template="plotly_white"
+                    )
+                    fig_pie.update_layout(title_font_family="Syne", margin=dict(t=50, b=20))
+                    st.plotly_chart(fig_pie, width='stretch')
+
+                st.markdown("**📋 Chi tiết các buổi tập**")
+                st.dataframe(
+                    history_df.sort_values('date', ascending=False),
+                    width='stretch'
+                )
+
+                if st.button("🗑️ Xóa lịch sử", type="secondary"):
+                    os.remove(history_file)
+                    st.success("Đã xóa lịch sử tập luyện.")
+                    st.rerun()
+            else:
+                st.info("Chưa có dữ liệu lịch sử.")
+        else:
+            st.info("Chưa có lịch sử tập luyện. Hãy thực hiện **Phân tích Video** để ghi lại kết quả.")
+
+    # ── TAB BÁO CÁO KỸ THUẬT ─────────────────────────────────────────────
+    with tab_report:
+        st.markdown("""
+        <div class="page-hero" style="margin-bottom:24px;">
+            <div class="badge">Technical Report</div>
+            <h1 style="font-size:1.8rem;">Báo cáo Nghiên cứu Học máy</h1>
+            <p>Tự động đếm số lần tập hít đất và squat từ video người tập bằng MediaPipe Pose kết hợp học máy</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        sections = {
+            "1. Xác lập bài toán": """
+**Bối cảnh & Động lực:** Xu hướng home workout tăng mạnh đặt ra thách thức thiếu giám sát của huấn luyện viên. Người tập đối mặt với sai tư thế (gây chấn thương) và đếm sai số lần (ảnh hưởng tiến độ).
+
+**Tại sao Push-up & Squat?** Hai bài tập đại diện cho upper body và lower body, có tính chu kỳ rõ rệt, phù hợp để xây dựng mô hình nhận diện chuỗi thời gian. "Đếm số lần" mang giá trị định lượng trực tiếp cho người dùng.
+
+**Thách thức dữ liệu "in-the-wild":** Ánh sáng thay đổi, occlusion, góc nhìn không chuẩn, tốc độ thực hiện khác nhau, trang phục và vóc dáng đa dạng.
+            """,
+            "2. Tiền xử lý & Trích xuất đặc trưng": """
+**Tại sao MediaPipe thay vì raw video?** BlazePose chuyển không gian ảnh RGB nhiều chiều thành 33 keypoints 3D — giảm chiều dữ liệu triệt để, tăng tính bất biến với ánh sáng, màu da và quần áo.
+
+**Chuẩn hóa:** (1) Centering: gốc tọa độ về mid-hip. (2) Scaling: chia theo chiều cao thân người → bất biến khoảng cách camera.
+
+**Feature Engineering — Góc khớp:** Bất biến với phép quay và tịnh tiến camera. Phản ánh trực tiếp biomechanics. Chuỗi góc theo thời gian mô tả trọn vẹn chu kỳ Lên-Xuống.
+
+**Sliding Window (30 frames):** Cung cấp temporal context cho Random Forest mà không cần kiến trúc RNN phức tạp. Delta features (tốc độ thay đổi góc) bổ sung thông tin động.
+
+**Vai trò lọc nhiễu:** MediaPipe thường "jitter" ở frame mờ → false reps nếu không lọc. Moving average hoặc Kalman filter khử nhiễu hiệu quả.
+            """,
+            "3. Thực thi mô hình & Quyết định thiết kế": """
+**So sánh hướng tiếp cận:**
+- *Rule-based (ngưỡng góc):* Dễ triển khai nhưng cứng nhắc — mỗi người có biên độ khớp khác nhau.
+- *Random Forest + Sliding Window:* Phù hợp tabular data, xử lý tốt phi tuyến, inference nhanh trên CPU → **lựa chọn hiện tại**.
+- *LSTM/Transformer:* Tối ưu lý thuyết nhưng cần nhiều dữ liệu và tài nguyên hơn.
+
+**Trade-off:** Hy sinh một phần accuracy để đổi lấy real-time speed — yêu cầu sống còn của ứng dụng Fitness.
+
+**Adaptive Learning:** Người dùng tự thu thập data cá nhân và retrain → mô hình tinh chỉnh theo form tập và góc quay quen thuộc của từng người.
+            """,
+            "4. Phân tích & Đánh giá": """
+**Metrics được chọn:**
+- *Accuracy & F1:* Đánh giá phân loại pha (UP/DOWN) per-frame.
+- *Precision:* Tránh đếm khống (false reps). Recall thấp → bỏ sót rep (undercounting).
+- *MAE rep count:* Metric thực tiễn nhất — sai lệch giữa rep máy đếm và rep thực tế.
+
+**Confusion Matrix insight:** Mô hình nhầm chủ yếu tại pha Transition (giữa UP và DOWN) — đây là điểm yếu điển hình của Sliding Window + RF. LSTM với long-term memory sẽ xử lý tốt hơn.
+
+**Wave plot (Predicted vs Ground Truth):** Mô hình hoạt động tốt khi người tập thực hiện đều nhịp, gặp khó khăn khi dừng lại nghỉ quá lâu giữa rep.
+            """,
+            "5. Rủi ro, Đạo đức & Định hướng": """
+**Rủi ro chính:** Phụ thuộc hoàn toàn vào MediaPipe — nếu detection thất bại (ánh sáng tối, quần áo rộng), toàn bộ pipeline sụp đổ (Cascading Failure). Dữ liệu nhỏ → dễ overfit vào góc quay cụ thể.
+
+**Privacy & Ethics:** Toàn bộ xử lý thực hiện **local/edge** — không raw video nào gửi lên server. Đảm bảo tuyệt đối quyền riêng tư người dùng.
+
+**So sánh:** Vision-based qua webcam kém chính xác hơn wearable sensors / Kinect, nhưng chi phí bằng 0, không cần phần cứng đặc biệt.
+
+**Future Work:**
+1. Mở rộng bài tập (Plank, Pull-up, Jumping Jacks) — chỉ cần thay dataset.
+2. AI Coach realtime: từ "đếm thụ động" → "sửa tư thế chủ động" với cảnh báo âm thanh.
+3. LSTM/GRU thay Random Forest khi đủ dữ liệu.
+4. Multi-angle fusion (2 camera) để tăng robustness.
+            """,
+        }
+
+        for title, content in sections.items():
+            with st.expander(f"**{title}**", expanded=(title.startswith("1."))):
+                st.markdown(content)
