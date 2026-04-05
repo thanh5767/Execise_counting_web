@@ -619,7 +619,7 @@ if "Giới thiệu" in page:
           <tr>
             <td style="width:30%;color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;vertical-align:top;">Tên đề tài</td>
             <td style="color:#e2e8f0;font-size:0.92rem;font-weight:500;padding:5px 0;">
-              Đếm số lần tập hít đất/squat từ video người tập bằng MediaPipe Pose kết hợp học máy
+              Đếm số lần tập hít đất/squat từ video người tập bằng MediaPipe Pose kết hợp học máy nhằm hỗ trợ luyện tập thể dục tại nhà hiệu quả
             </td>
           </tr>
           <tr>
