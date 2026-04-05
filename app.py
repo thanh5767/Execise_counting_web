@@ -608,7 +608,7 @@ if "Giới thiệu" in page:
     page_hero(
         "Báo cáo kết thúc học phần",
         "Giới thiệu & Khám phá dữ liệu",
-        "Tự động đếm số lần tập hít đất & squat từ video bằng MediaPipe Pose kết hợp học máy"
+        "Tự động đếm số lần tập hít đất & squat từ video bằng MediaPipe Pose kết hợp học máy nhằm hỗ trợ luyện tập thể dục tại nhà hiệu quả"
     )
 
     # ── Student info ──────────────────────────────────────────────────────
