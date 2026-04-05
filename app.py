@@ -632,7 +632,7 @@ if "Giới thiệu" in page:
           </tr>
           <tr>
             <td style="color:rgba(255,255,255,0.45);font-size:0.82rem;padding:5px 0;">Năm học</td>
-            <td style="color:#e2e8f0;padding:5px 0;">2024 – 2025</td>
+            <td style="color:#e2e8f0;padding:5px 0;">2025 – 2026</td>
           </tr>
         </table>
     </div>
